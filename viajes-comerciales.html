@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Machinery — Control de Viajes Comerciales</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCnKPV5H7eop2d-WuxTh0cI-3kWVEZsqTc",
+  authDomain: "world-machinery-5a8d2.firebaseapp.com",
+  projectId: "world-machinery-5a8d2",
+  storageBucket: "world-machinery-5a8d2.firebasestorage.app",
+  messagingSenderId: "335551459297",
+  appId: "1:335551459297:web:c605ca391aff21a6786ca0"
+};
+
+const fbApp  = initializeApp(firebaseConfig);
+const db     = getFirestore(fbApp);
+const vCol   = collection(db, 'viajes');
+const cCol   = collection(db, 'viajes_ciudades');
+
+window._fbSave   = async (col, id, data) => await setDoc(doc(db, col, id), data);
+window._fbDelete = async (col, id)       => await deleteDoc(doc(db, col, id));
+
+onSnapshot(vCol, snap => {
+  window._viajes = snap.docs.map(d => ({id: d.id, ...d.data()}));
+  renderAll();
+  setSyncOk();
+}, () => setSyncErr());
+
+onSnapshot(cCol, snap => {
+  window._ciudades = snap.docs.map(d => ({id: d.id, ...d.data()}));
+  renderCiudades();
+  poblarSelectCiudades();
+}, () => {});
+</script>
+<style>
+:root{
+  --g:#7ab730;--gd:#5a8e1a;--gl:#eef7dc;--gray:#2d3035;--gray2:#4a4f57;--gray3:#6b7280;
+  --bg:#f2f4f6;--surface:#fff;--border:#e2e5ea;--danger:#dc2626;--warn:#d97706;
+  --font-h:'Rajdhani',sans-serif;--font:'DM Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--gray);font-size:14px}
+/* HEADER */
+.hdr{background:var(--gray);color:#fff;display:flex;align-items:center;gap:14px;padding:0 24px;height:56px;position:sticky;top:0;z-index:100}
+.hdr svg{width:28px;height:28px;opacity:.85}
+.hdr-title{font-family:var(--font-h);font-size:1.2rem;font-weight:700;letter-spacing:.5px}
+.hdr-sub{font-size:10px;opacity:.55;letter-spacing:1.5px;text-transform:uppercase;margin-top:1px}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.hdr-badge{background:var(--g);color:#fff;font-family:var(--font-h);font-size:11px;font-weight:700;padding:3px 10px;border-radius:4px;letter-spacing:.8px}
+.hdr-sync{display:flex;align-items:center;gap:6px;font-size:11px;opacity:.8}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#888}
+.sync-dot.ok{background:var(--g);box-shadow:0 0 5px rgba(122,183,48,.6)}
+.sync-dot.err{background:var(--danger)}
+/* TABS */
+.nav-tabs{display:flex;background:var(--surface);border-bottom:2px solid var(--border);padding:0 20px;gap:2px}
+.tab-btn{display:flex;align-items:center;gap:7px;padding:12px 18px;border:none;background:none;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500;color:var(--gray3);border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s}
+.tab-btn svg{width:15px;height:15px}
+.tab-btn:hover{color:var(--g)}
+.tab-btn.active{color:var(--g);border-bottom-color:var(--g);font-weight:600}
+.tab-panel{display:none}.tab-panel.active{display:block}
+/* CONTENT */
+.content{padding:24px;max-width:1400px;margin:0 auto}
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;border-top:3px solid var(--border)}
+.kpi.a{border-top-color:var(--g)}.kpi.g{border-top-color:#16a34a}.kpi.r{border-top-color:var(--danger)}.kpi.b{border-top-color:#2563eb}
+.kpi-lbl{font-size:10.5px;color:var(--gray3);text-transform:uppercase;letter-spacing:.6px;font-weight:600;margin-bottom:6px}
+.kpi-val{font-family:var(--font-h);font-size:1.4rem;font-weight:700;line-height:1}
+.kpi-sub{font-size:10px;color:var(--gray3);margin-top:4px}
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden}
+.card-hd{display:flex;align-items:center;gap:8px;padding:12px 18px;font-family:var(--font-h);font-size:.9rem;font-weight:700;color:var(--gray2);border-bottom:1px solid var(--border);background:#fafbfc}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--g);display:inline-block}
+/* TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{background:#f5f7f9;padding:9px 13px;font-size:10.5px;font-weight:700;color:var(--gray2);text-transform:uppercase;letter-spacing:.5px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 13px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f9fdf5}
+/* FORM */
+.form-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden}
+.form-section-title{display:flex;align-items:center;gap:8px;padding:11px 18px;font-family:var(--font-h);font-size:.88rem;font-weight:700;color:var(--g);background:var(--gl);border-bottom:1px solid #d4edb0}
+.form-section-body{padding:16px 18px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:12px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:12px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:11.5px;font-weight:600;color:var(--gray2)}
+.fc{background:#fff;border:1px solid var(--border);border-radius:6px;color:var(--gray);padding:8px 11px;font-family:var(--font);font-size:13px;outline:none;transition:.2s;width:100%}
+.fc:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(122,183,48,.13)}
+.fc.calc{background:#f5f7f9;color:var(--gray3)}
+.radio-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.radio-btn{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;cursor:pointer;padding:5px 10px;border:1px solid var(--border);border-radius:5px;transition:.15s}
+.radio-btn:has(input:checked){background:var(--gl);border-color:var(--g);color:var(--gd);font-weight:600}
+.radio-btn input{display:none}
+/* TOTALS BOX */
+.totals-box{background:var(--gl);border:1px solid #c5e49a;border-radius:8px;padding:14px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:12px}
+.total-item label{font-size:10px;text-transform:uppercase;letter-spacing:.6px;font-weight:700;color:var(--gd);display:block;margin-bottom:4px}
+.total-item .val{font-family:var(--font-h);font-size:1.2rem;font-weight:700}
+.total-item .val.pos{color:var(--danger)}.total-item .val.neg{color:#16a34a}
+/* BTNS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600;transition:.15s}
+.btn svg{width:14px;height:14px}
+.btn-primary{background:var(--g);color:#fff}.btn-primary:hover{background:var(--gd)}
+.btn-danger{background:#fef2f2;color:var(--danger);border:1px solid #fecaca}.btn-danger:hover{background:#fee2e2}
+.btn-ghost{background:transparent;color:var(--gray2);border:1px solid var(--border)}.btn-ghost:hover{background:#f3f4f6}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-icon{padding:5px 7px}
+/* BADGES */
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.b-pend{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+.b-dev{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+.b-fav{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0}
+.b-ok{background:var(--gl);color:var(--gd);border:1px solid #c5e49a}
+/* FILTERS */
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:12px 16px}
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:12px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.2)}
+.modal-hd{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-family:var(--font-h);font-size:1rem;font-weight:700;position:sticky;top:0;background:#fff}
+.modal-bd{padding:22px}
+.modal-ft{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;background:#fafbfc}
+/* EMPTY */
+.empty-state{text-align:center;padding:40px 20px;color:var(--gray3)}
+.empty-state svg{width:36px;height:36px;margin-bottom:12px;opacity:.4}
+/* INFORME */
+.inf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.inf-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.inf-card-hd{background:var(--gl);padding:10px 16px;font-family:var(--font-h);font-weight:700;color:var(--gd);font-size:.9rem;border-bottom:1px solid #c5e49a}
+/* UTILS */
+.no-print{}.flex{display:flex}.gap-8{gap:8px}.items-center{align-items:center}
+.text-muted{color:var(--gray3)}.fw-600{font-weight:600}
+@media print{.no-print,.nav-tabs,.hdr .hdr-right{display:none!important} .tab-panel{display:block!important}}
+@media(max-width:768px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </div>
+  <div>
+    <div class="hdr-title">World Machinery</div>
+    <div class="hdr-sub">Control de Viajes Comerciales</div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-sync"><div class="sync-dot" id="syncDot"></div><span id="syncTxt" style="font-size:11px;color:#aaa">Conectando...</span></div>
+    <div class="hdr-badge">COP</div>
+  </div>
+</header>
+
+<nav class="nav-tabs" id="nav-tabs">
+  <button class="tab-btn active" onclick="setTab(0)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Viajes
+  </button>
+  <button class="tab-btn" onclick="setTab(1)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Nuevo viaje
+  </button>
+  <button class="tab-btn" onclick="setTab(2)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Ciudades
+  </button>
+  <button class="tab-btn" onclick="setTab(3)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Informe global
+  </button>
+</nav>
+
+<!-- TAB 0: LISTA -->
+<div class="tab-panel active" id="tab-0">
+<div class="content">
+  <div class="kpis" id="kpis"></div>
+  <div class="card">
+    <div class="card-hd"><span class="dot"></span>Filtros</div>
+    <div class="filters">
+      <div class="fg" style="margin:0;flex:1;min-width:160px"><label>Comercial</label><input type="text" id="f-comercial" class="fc" placeholder="Buscar..." oninput="renderViajes()"></div>
+      <div class="fg" style="margin:0;flex:1;min-width:140px"><label>Ciudad destino</label><select id="f-ciudad" class="fc" onchange="renderViajes()"><option value="">Todas</option></select></div>
+      <div class="fg" style="margin:0;flex:1;min-width:140px"><label>Estado</label>
+        <select id="f-estado" class="fc" onchange="renderViajes()">
+          <option value="">Todos</option>
+          <option value="pendiente">Pendiente soportes</option>
+          <option value="devolver">Saldo a devolver</option>
+          <option value="favor">Saldo a favor</option>
+          <option value="cerrado">Cerrado</option>
+        </select>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="limpiarFiltros()">Limpiar</button>
+      <button class="btn btn-primary btn-sm no-print" onclick="nuevoViaje()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo viaje
+      </button>
+      <button class="btn btn-ghost btn-sm no-print" onclick="exportExcel()">⬇ CSV</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><span class="dot"></span>Registro de viajes <span id="reg-count" style="margin-left:6px;opacity:.6;font-size:11px"></span></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Comercial</th><th>Destino</th><th>Fechas</th><th>Transporte</th><th>Est. ciudad</th><th>Total real</th><th>Entregado</th><th>Saldo final</th><th>Estado</th><th class="no-print">Acciones</th></tr></thead>
+        <tbody id="tbody-viajes"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- TAB 1: FORM -->
+<div class="tab-panel" id="tab-1">
+<div class="content">
+<input type="hidden" id="v-id">
+<div id="form-alert" style="display:none;margin-bottom:12px"></div>
+
+<div class="form-section">
+  <div class="form-section-title"><span class="dot"></span>1. Datos generales</div>
+  <div class="form-section-body">
+    <div class="grid-3">
+      <div class="fg"><label>Comercial *</label><input type="text" id="v-comercial" class="fc" placeholder="Nombre completo"></div>
+      <div class="fg"><label>Ciudad de origen *</label><select id="v-origen" class="fc"><option value="">Selecciona...</option></select></div>
+      <div class="fg"><label>Ciudad de destino *</label><select id="v-destino" class="fc" onchange="autoFillCiudad()"><option value="">Selecciona...</option></select></div>
+    </div>
+    <div class="grid-4">
+      <div class="fg"><label>Fecha salida *</label><input type="date" id="v-salida" class="fc" onchange="calcDias()"></div>
+      <div class="fg"><label>Fecha regreso *</label><input type="date" id="v-regreso" class="fc" onchange="calcDias()"></div>
+      <div class="fg"><label>Noches (auto)</label><input type="number" id="v-noches" class="fc calc" readonly></div>
+      <div class="fg"><label>Días viáticos (auto)</label><input type="number" id="v-dias" class="fc calc" readonly></div>
+    </div>
+    <div class="grid-3">
+      <div class="fg"><label>Motivo del viaje *</label><input type="text" id="v-motivo" class="fc" placeholder="Ej: Visita clientes zona norte"></div>
+      <div class="fg"><label>Cliente / zona visitada</label><input type="text" id="v-cliente" class="fc"></div>
+      <div class="fg"><label>Observaciones</label><input type="text" id="v-obs" class="fc"></div>
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <div class="form-section-title"><span class="dot"></span>2. Transporte</div>
+  <div class="form-section-body">
+    <div class="grid-2">
+      <div class="fg"><label>Medio de transporte *</label>
+        <div class="radio-group">
+          <label class="radio-btn"><input type="radio" name="transporte" value="avion"> ✈️ Avión</label>
+          <label class="radio-btn"><input type="radio" name="transporte" value="bus"> 🚌 Bus</label>
+          <label class="radio-btn"><input type="radio" name="transporte" value="carro"> 🚗 Carro</label>
+          <label class="radio-btn"><input type="radio" name="transporte" value="otro"> Otro</label>
+        </div>
+      </div>
+      <div class="fg"><label>Aerolínea / Transportadora</label>
+        <select id="v-aerolinea" class="fc">
+          <option value="">No aplica / por definir</option>
+          <option>Avianca</option><option>LATAM</option><option>Wingo</option>
+          <option>EasyFly</option><option>Satena</option><option>Flota Magdalena</option>
+          <option>Expreso Bolivariano</option><option>Berlinas</option><option>Otra</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="fg"><label>Valor real tiquete (COP)</label><input type="number" id="v-tiquete" class="fc" value="0" min="0" oninput="calcTotales()"></div>
+      <div class="fg"><label>Tiquete pagado por</label>
+        <div class="radio-group">
+          <label class="radio-btn"><input type="radio" name="pg-tiquete" value="empresa"> Empresa</label>
+          <label class="radio-btn"><input type="radio" name="pg-tiquete" value="comercial" checked> Al comercial</label>
+        </div>
+      </div>
+      <div class="fg"><label>Ref. tiquete estimado ciudad</label><input type="text" id="v-tiq-est" class="fc calc" readonly></div>
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <div class="form-section-title"><span class="dot"></span>3. Alojamiento</div>
+  <div class="form-section-body">
+    <div class="grid-3">
+      <div class="fg"><label>Hotel utilizado</label><input type="text" id="v-hotel" class="fc"></div>
+      <div class="fg"><label>Valor real hotel total (COP)</label><input type="number" id="v-hotel-val" class="fc" value="0" oninput="calcTotales()"></div>
+      <div class="fg"><label>Ref. hotel estimado</label><input type="text" id="v-hotel-est" class="fc calc" readonly></div>
+    </div>
+    <div class="fg"><label>Hotel pagado por</label>
+      <div class="radio-group">
+        <label class="radio-btn"><input type="radio" name="pg-hotel" value="empresa"> Empresa directamente</label>
+        <label class="radio-btn"><input type="radio" name="pg-hotel" value="comercial" checked> Al comercial</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <div class="form-section-title"><span class="dot"></span>4. Viáticos y otros gastos</div>
+  <div class="form-section-body">
+    <div class="grid-4">
+      <div class="fg"><label>Tarifa diaria ref. ciudad</label><input type="text" id="v-tarifa-ref" class="fc calc" readonly></div>
+      <div class="fg"><label>Viáticos estimados (auto)</label><input type="number" id="v-viaticos-est" class="fc calc" readonly></div>
+      <div class="fg"><label>Viáticos reales entregados (COP)</label><input type="number" id="v-viaticos" class="fc" value="0" oninput="calcTotales()"></div>
+      <div class="fg"><label>Viáticos entregados a</label>
+        <div class="radio-group">
+          <label class="radio-btn"><input type="radio" name="pg-viaticos" value="comercial" checked> Comercial</label>
+        </div>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="fg"><label>Otros gastos autorizados (COP)</label><input type="number" id="v-otros" class="fc" value="0" oninput="calcTotales()"></div>
+      <div class="fg"><label>Descripción otros gastos</label><input type="text" id="v-otros-desc" class="fc"></div>
+      <div class="fg"><label>Otros gastos pagados por</label>
+        <div class="radio-group">
+          <label class="radio-btn"><input type="radio" name="pg-otros" value="empresa"> Empresa</label>
+          <label class="radio-btn"><input type="radio" name="pg-otros" value="comercial" checked> Comercial</label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <div class="form-section-title"><span class="dot"></span>5. Gasto real del comercial (al regreso)</div>
+  <div class="form-section-body">
+    <div class="grid-4">
+      <div class="fg"><label>Gasto real tiquete</label><input type="number" id="v-r-tiquete" class="fc" value="0" oninput="calcTotales()"></div>
+      <div class="fg"><label>Gasto real hotel</label><input type="number" id="v-r-hotel" class="fc" value="0" oninput="calcTotales()"></div>
+      <div class="fg"><label>Gasto real viáticos</label><input type="number" id="v-r-viaticos" class="fc" value="0" oninput="calcTotales()"></div>
+      <div class="fg"><label>Gasto real otros</label><input type="number" id="v-r-otros" class="fc" value="0" oninput="calcTotales()"></div>
+    </div>
+    <div class="totals-box" id="totals-box">
+      <div class="total-item"><label>Est. ciudad</label><div class="val" id="t-est-ciudad">$0</div></div>
+      <div class="total-item"><label>Total real comercial</label><div class="val" id="t-real">$0</div></div>
+      <div class="total-item"><label>Pagado empresa directa</label><div class="val" id="t-empresa">$0</div></div>
+      <div class="total-item"><label>Entregado al comercial</label><div class="val" id="t-entregado">$0</div></div>
+      <div class="total-item"><label>Saldo final</label><div class="val" id="t-saldo">$0</div></div>
+      <div class="total-item"><label>Estado</label><div id="t-estado-badge"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <div class="form-section-title"><span class="dot"></span>6. Soportes y observaciones</div>
+  <div class="form-section-body">
+    <div class="grid-2">
+      <div class="fg"><label>Soporte tiquete (nombre/ref)</label><input type="text" id="v-s-tiquete" class="fc" placeholder="Nombre del archivo o referencia"></div>
+      <div class="fg"><label>Soporte hotel (nombre/ref)</label><input type="text" id="v-s-hotel" class="fc" placeholder="Nombre del archivo o referencia"></div>
+      <div class="fg"><label>Soporte viáticos (nombre/ref)</label><input type="text" id="v-s-viaticos" class="fc" placeholder="Nombre del archivo o referencia"></div>
+      <div class="fg"><label>Soporte otros gastos (nombre/ref)</label><input type="text" id="v-s-otros" class="fc" placeholder="Nombre del archivo o referencia"></div>
+    </div>
+    <div class="fg"><label>Estado del viaje</label>
+      <div class="radio-group">
+        <label class="radio-btn"><input type="radio" name="v-estado" value="pendiente" checked> ⏳ Pendiente soportes</label>
+        <label class="radio-btn"><input type="radio" name="v-estado" value="devolver"> 💰 Saldo a devolver</label>
+        <label class="radio-btn"><input type="radio" name="v-estado" value="favor"> 🎁 Saldo a favor</label>
+        <label class="radio-btn"><input type="radio" name="v-estado" value="cerrado"> ✅ Cerrado</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;gap:10px;margin-top:4px">
+  <button class="btn btn-primary" onclick="guardarViaje()">💾 Guardar viaje</button>
+  <button class="btn btn-ghost" onclick="limpiarForm()">Limpiar formulario</button>
+</div>
+</div>
+</div>
+
+<!-- TAB 2: CIUDADES -->
+<div class="tab-panel" id="tab-2">
+<div class="content">
+  <div class="card">
+    <div class="card-hd"><span class="dot"></span>Base de ciudades y tarifas</div>
+    <div style="padding:14px 18px;display:flex;gap:10px;align-items:center">
+      <button class="btn btn-primary btn-sm" onclick="abrirModalCiudad()">+ Agregar ciudad</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Ciudad</th><th>Hotel mín/noche</th><th>Tiquete estimado</th><th>Viáticos/día</th><th>Acciones</th></tr></thead>
+        <tbody id="tbody-ciudades"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- TAB 3: INFORME -->
+<div class="tab-panel" id="tab-3">
+<div class="content">
+  <div style="display:flex;gap:10px;margin-bottom:16px">
+    <button class="btn btn-ghost btn-sm no-print" onclick="window.print()">🖨 Imprimir</button>
+    <button class="btn btn-ghost btn-sm no-print" onclick="exportExcel()">⬇ Excel</button>
+  </div>
+  <div class="inf-grid" id="informe-content"></div>
+</div>
+</div>
+
+<!-- MODAL CIUDAD -->
+<div class="overlay" id="modal-ciudad">
+  <div class="modal">
+    <div class="modal-hd">Ciudad / Tarifa <button class="btn btn-ghost btn-sm btn-icon" onclick="cerrarModal('modal-ciudad')">✕</button></div>
+    <div class="modal-bd">
+      <input type="hidden" id="mc-id">
+      <div class="grid-2" style="margin-bottom:12px">
+        <div class="fg"><label>Ciudad *</label><input type="text" id="mc-ciudad" class="fc"></div>
+        <div class="fg"><label>Viáticos/día (COP)</label><input type="number" id="mc-viaticos" class="fc" value="0"></div>
+        <div class="fg"><label>Hotel mínimo/noche (COP)</label><input type="number" id="mc-hotel" class="fc" value="0"></div>
+        <div class="fg"><label>Tiquete estimado (COP)</label><input type="number" id="mc-tiquete" class="fc" value="0"></div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost btn-sm" onclick="cerrarModal('modal-ciudad')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="guardarCiudad()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE -->
+<div class="overlay" id="modal-detalle">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-hd"><span id="det-titulo">Informe de Viaje</span> <button class="btn btn-ghost btn-sm btn-icon" onclick="cerrarModal('modal-detalle')">✕</button></div>
+    <div class="modal-bd" id="det-content"></div>
+    <div class="modal-ft"><button class="btn btn-ghost btn-sm" onclick="cerrarModal('modal-detalle')">Cerrar</button><button class="btn btn-primary btn-sm" onclick="window.print()">🖨 Imprimir</button></div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR -->
+<div class="overlay" id="modal-confirm">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-hd">⚠️ Confirmar eliminación <button class="btn btn-ghost btn-sm btn-icon" onclick="cerrarModal('modal-confirm')">✕</button></div>
+    <div class="modal-bd" style="text-align:center;padding:28px 22px"><p id="confirm-msg" style="color:var(--gray3);font-size:13px"></p></div>
+    <div class="modal-ft"><button class="btn btn-ghost btn-sm" onclick="cerrarModal('modal-confirm')">Cancelar</button><button class="btn btn-danger btn-sm" id="confirm-ok">Eliminar</button></div>
+  </div>
+</div>
+
+<script>
+// ===================== STATE =====================
+window._viajes   = [];
+window._ciudades = [];
+
+const CIUDADES_OPTS = ['Armenia','Barranquilla','Bogotá','Bucaramanga','Cali','Cartagena','Cúcuta','Ibagué','Manizales','Medellín','Montería','Neiva','Pasto','Pereira','Santa Marta','Villavicencio'];
+
+// ===================== INIT =====================
+function init(){
+  poblarSelectCiudades();
+  document.getElementById('v-salida').value = hoy();
+  document.getElementById('v-regreso').value = hoy();
+  calcDias();
+  calcTotales();
+  setTimeout(()=>{
+    if(!window._viajes.length && !window._ciudades.length){
+      renderViajes(); renderCiudades(); renderKPIs(); renderInforme();
+    }
+  }, 3000);
+}
+
+function setSyncOk(){
+  document.getElementById('syncDot').className='sync-dot ok';
+  document.getElementById('syncTxt').textContent='En línea ✓';
+  document.getElementById('syncTxt').style.color='var(--g)';
+}
+function setSyncErr(){
+  document.getElementById('syncDot').className='sync-dot err';
+  document.getElementById('syncTxt').textContent='Sin conexión';
+}
+
+function hoy(){ return new Date().toISOString().split('T')[0]; }
+function fmtCOP(n){ return '$ '+(Math.round(n||0)).toLocaleString('es-CO'); }
+function fmtFecha(f){ if(!f) return '—'; const[y,m,d]=f.split('-'); return `${d}/${m}/${y}`; }
+function safe(n){ return isNaN(parseFloat(n))?0:parseFloat(n); }
+
+// ===================== TABS =====================
+function setTab(n){
+  document.querySelectorAll('.tab-panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===n));
+  if(n===3) renderInforme();
+}
+
+// ===================== RENDER ALL =====================
+function renderAll(){
+  renderViajes();
+  renderKPIs();
+  renderInforme();
+  poblarFiltrosCiudad();
+}
+
+// ===================== KPIs =====================
+function renderKPIs(){
+  const vs = window._viajes;
+  const total = vs.length;
+  const entregado = vs.reduce((a,v)=>a+safe(v.totalEntregado),0);
+  const real = vs.reduce((a,v)=>a+safe(v.totalReal),0);
+  const devolver = vs.filter(v=>safe(v.saldoFinal)>0).reduce((a,v)=>a+safe(v.saldoFinal),0);
+  const favor = vs.filter(v=>safe(v.saldoFinal)<0).reduce((a,v)=>a+Math.abs(safe(v.saldoFinal)),0);
+  document.getElementById('kpis').innerHTML = `
+    <div class="kpi b"><div class="kpi-lbl">Viajes</div><div class="kpi-val">${total}</div><div class="kpi-sub">registrados</div></div>
+    <div class="kpi a"><div class="kpi-lbl">Entregado a comerciales</div><div class="kpi-val">${fmtCOP(entregado)}</div><div class="kpi-sub">anticipo total</div></div>
+    <div class="kpi"><div class="kpi-lbl">Gasto real total</div><div class="kpi-val">${fmtCOP(real)}</div><div class="kpi-sub">suma de viajes</div></div>
+    <div class="kpi r"><div class="kpi-lbl">A devolver a empresa</div><div class="kpi-val">${fmtCOP(devolver)}</div><div class="kpi-sub">comerciales con saldo +</div></div>
+    <div class="kpi g"><div class="kpi-lbl">A favor de comerciales</div><div class="kpi-val">${fmtCOP(favor)}</div><div class="kpi-sub">empresa debe reembolsar</div></div>
+  `;
+}
+
+// ===================== VIAJES TABLE =====================
+function renderViajes(){
+  const comFil  = (document.getElementById('f-comercial')?.value||'').toLowerCase();
+  const ciuFil  = document.getElementById('f-ciudad')?.value||'';
+  const estFil  = document.getElementById('f-estado')?.value||'';
+  let list = window._viajes.filter(v=>{
+    if(comFil && !(v.comercial||'').toLowerCase().includes(comFil)) return false;
+    if(ciuFil && v.destino!==ciuFil) return false;
+    if(estFil && v.estado!==estFil) return false;
+    return true;
+  }).sort((a,b)=>(b.salida||'').localeCompare(a.salida||''));
+  const tbody = document.getElementById('tbody-viajes');
+  document.getElementById('reg-count').textContent = `(${list.length} de ${window._viajes.length})`;
+  if(!list.length){ tbody.innerHTML=`<tr><td colspan="11"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>No hay viajes registrados.</p></div></td></tr>`; return; }
+  const badgeMap = {pendiente:'b-pend',devolver:'b-dev',favor:'b-fav',cerrado:'b-ok'};
+  const lblMap   = {pendiente:'⏳ Pendiente',devolver:'💰 A devolver',favor:'🎁 A favor',cerrado:'✅ Cerrado'};
+  tbody.innerHTML = list.map((v,i)=>{
+    const saldo = safe(v.saldoFinal);
+    const saldoColor = saldo>0?'color:var(--danger)':saldo<0?'color:#16a34a':'';
+    return `<tr>
+      <td style="color:var(--gray3);font-size:11px">${i+1}</td>
+      <td><strong>${v.comercial||'—'}</strong></td>
+      <td>${v.destino||'—'}</td>
+      <td style="font-size:12px;color:var(--gray3)">${fmtFecha(v.salida)}→${fmtFecha(v.regreso)}</td>
+      <td style="font-size:12px">${v.aerolinea||v.transporte||'—'}</td>
+      <td>${fmtCOP(v.estCiudad)}</td>
+      <td>${fmtCOP(v.totalReal)}</td>
+      <td>${fmtCOP(v.totalEntregado)}</td>
+      <td style="${saldoColor};font-weight:600">${fmtCOP(Math.abs(saldo))} ${saldo>0?'↩':saldo<0?'↪':''}</td>
+      <td><span class="badge ${badgeMap[v.estado]||'b-pend'}">${lblMap[v.estado]||v.estado||'—'}</span></td>
+      <td class="no-print" style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm btn-icon" title="Ver detalle" onclick="verDetalle('${v.id}')">🔍</button>
+        <button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="editarViaje('${v.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm btn-icon" title="Eliminar" onclick="confirmarEliminar('viajes','${v.id}','Viaje de ${v.comercial||''}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function poblarFiltrosCiudad(){
+  const destinos = [...new Set(window._viajes.map(v=>v.destino).filter(Boolean))].sort();
+  const sel = document.getElementById('f-ciudad');
+  if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Todas</option>' + destinos.map(c=>`<option ${c===cur?'selected':''}>${c}</option>`).join('');
+}
+
+function limpiarFiltros(){
+  ['f-comercial','f-ciudad','f-estado'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  renderViajes();
+}
+
+// ===================== FORM =====================
+function poblarSelectCiudades(){
+  const todas = [...new Set([...CIUDADES_OPTS, ...(window._ciudades||[]).map(c=>c.ciudad)])].sort();
+  const opts = '<option value="">Selecciona...</option>' + todas.map(c=>`<option>${c}</option>`).join('');
+  ['v-origen','v-destino'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
+}
+
+function calcDias(){
+  const s = document.getElementById('v-salida')?.value;
+  const r = document.getElementById('v-regreso')?.value;
+  if(s && r){
+    const diff = Math.max(0, Math.round((new Date(r)-new Date(s))/86400000));
+    const noches = diff;
+    const dias = diff + 1;
+    document.getElementById('v-noches').value = noches;
+    document.getElementById('v-dias').value = dias;
+  }
+  autoFillCiudad();
+  calcTotales();
+}
+
+function autoFillCiudad(){
+  const dest = document.getElementById('v-destino')?.value;
+  const dias = safe(document.getElementById('v-dias')?.value)||1;
+  const noches = safe(document.getElementById('v-noches')?.value)||0;
+  const ciudad = window._ciudades.find(c=>c.ciudad===dest);
+  if(ciudad){
+    document.getElementById('v-tiq-est').value  = fmtCOP(ciudad.tiquete||0);
+    document.getElementById('v-hotel-est').value = fmtCOP((ciudad.hotel||0)*noches) + ` (${noches} noches)`;
+    document.getElementById('v-tarifa-ref').value = fmtCOP(ciudad.viaticos||0) + '/día';
+    document.getElementById('v-viaticos-est').value = (ciudad.viaticos||0)*dias;
+  } else {
+    ['v-tiq-est','v-hotel-est','v-tarifa-ref'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('v-viaticos-est').value = 0;
+  }
+  calcTotales();
+}
+
+function calcTotales(){
+  const dest = document.getElementById('v-destino')?.value;
+  const noches = safe(document.getElementById('v-noches')?.value)||0;
+  const dias = safe(document.getElementById('v-dias')?.value)||1;
+  const ciudad = window._ciudades.find(c=>c.ciudad===dest);
+
+  // Estimado ciudad
+  const estTiq = ciudad ? safe(ciudad.tiquete) : 0;
+  const estHotel = ciudad ? safe(ciudad.hotel)*noches : 0;
+  const estViat = ciudad ? safe(ciudad.viaticos)*dias : 0;
+  const estCiudad = estTiq + estHotel + estViat;
+
+  // Valores reales entregados
+  const tiquete   = safe(document.getElementById('v-tiquete')?.value);
+  const hotelVal  = safe(document.getElementById('v-hotel-val')?.value);
+  const viaticos  = safe(document.getElementById('v-viaticos')?.value);
+  const otros     = safe(document.getElementById('v-otros')?.value);
+
+  // Pagado por empresa directa
+  const pgTiq   = document.querySelector('input[name="pg-tiquete"]:checked')?.value==='empresa' ? tiquete : 0;
+  const pgHotel = document.querySelector('input[name="pg-hotel"]:checked')?.value==='empresa' ? hotelVal : 0;
+  const pgOtros = document.querySelector('input[name="pg-otros"]:checked')?.value==='empresa' ? otros : 0;
+  const empresa = pgTiq + pgHotel + pgOtros;
+
+  // Entregado al comercial
+  const entTiq   = document.querySelector('input[name="pg-tiquete"]:checked')?.value==='comercial' ? tiquete : 0;
+  const entHotel = document.querySelector('input[name="pg-hotel"]:checked')?.value==='comercial' ? hotelVal : 0;
+  const entViat  = viaticos;
+  const entOtros = document.querySelector('input[name="pg-otros"]:checked')?.value==='comercial' ? otros : 0;
+  const entregado = entTiq + entHotel + entViat + entOtros;
+
+  // Gasto real declarado
+  const rTiq   = safe(document.getElementById('v-r-tiquete')?.value);
+  const rHotel = safe(document.getElementById('v-r-hotel')?.value);
+  const rViat  = safe(document.getElementById('v-r-viaticos')?.value);
+  const rOtros = safe(document.getElementById('v-r-otros')?.value);
+  const totalReal = rTiq + rHotel + rViat + rOtros;
+
+  // Saldo final: entregado - real (positivo = debe devolver, negativo = empresa debe)
+  const saldo = entregado - totalReal;
+
+  // Update UI
+  const s = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  s('t-est-ciudad', fmtCOP(estCiudad));
+  s('t-real', fmtCOP(totalReal));
+  s('t-empresa', fmtCOP(empresa));
+  s('t-entregado', fmtCOP(entregado));
+  s('t-saldo', (saldo>0?'+':'')+fmtCOP(Math.abs(saldo)));
+  const badgeEl = document.getElementById('t-estado-badge');
+  if(badgeEl){
+    if(saldo>100) badgeEl.innerHTML='<span class="badge b-dev">A devolver</span>';
+    else if(saldo<-100) badgeEl.innerHTML='<span class="badge b-fav">A favor comercial</span>';
+    else badgeEl.innerHTML='<span class="badge b-ok">Cuadrado ✓</span>';
+  }
+  const saldoEl = document.getElementById('t-saldo');
+  if(saldoEl) saldoEl.style.color = saldo>100?'var(--danger)':saldo<-100?'#16a34a':'var(--gray)';
+
+  return { estCiudad, totalReal, empresa, entregado, saldo };
+}
+
+function nuevoViaje(){ limpiarForm(); setTab(1); }
+
+function limpiarForm(){
+  document.getElementById('v-id').value='';
+  const campos = ['v-comercial','v-motivo','v-cliente','v-obs','v-aerolinea','v-hotel','v-otros-desc','v-s-tiquete','v-s-hotel','v-s-viaticos','v-s-otros'];
+  campos.forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['v-tiquete','v-hotel-val','v-viaticos','v-otros','v-r-tiquete','v-r-hotel','v-r-viaticos','v-r-otros'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=0; });
+  document.getElementById('v-salida').value = hoy();
+  document.getElementById('v-regreso').value = hoy();
+  document.getElementById('v-origen').value = '';
+  document.getElementById('v-destino').value = '';
+  document.querySelector('input[name="transporte"][value="avion"]').checked=true;
+  document.querySelector('input[name="pg-tiquete"][value="comercial"]').checked=true;
+  document.querySelector('input[name="pg-hotel"][value="comercial"]').checked=true;
+  document.querySelector('input[name="pg-otros"][value="comercial"]').checked=true;
+  document.querySelector('input[name="v-estado"][value="pendiente"]').checked=true;
+  calcDias();
+}
+
+function editarViaje(id){
+  const v = window._viajes.find(x=>x.id===id);
+  if(!v) return;
+  limpiarForm();
+  document.getElementById('v-id').value = v.id;
+  const setVal = (el, val) => { if(el) el.value = val||''; };
+  setVal(document.getElementById('v-comercial'), v.comercial);
+  setVal(document.getElementById('v-origen'), v.origen);
+  setVal(document.getElementById('v-destino'), v.destino);
+  setVal(document.getElementById('v-salida'), v.salida);
+  setVal(document.getElementById('v-regreso'), v.regreso);
+  setVal(document.getElementById('v-motivo'), v.motivo);
+  setVal(document.getElementById('v-cliente'), v.cliente);
+  setVal(document.getElementById('v-obs'), v.obs);
+  setVal(document.getElementById('v-aerolinea'), v.aerolinea);
+  setVal(document.getElementById('v-tiquete'), v.tiquete);
+  setVal(document.getElementById('v-hotel'), v.hotel);
+  setVal(document.getElementById('v-hotel-val'), v.hotelVal);
+  setVal(document.getElementById('v-viaticos'), v.viaticos);
+  setVal(document.getElementById('v-otros'), v.otros);
+  setVal(document.getElementById('v-otros-desc'), v.otrosDesc);
+  setVal(document.getElementById('v-r-tiquete'), v.rTiquete);
+  setVal(document.getElementById('v-r-hotel'), v.rHotel);
+  setVal(document.getElementById('v-r-viaticos'), v.rViaticos);
+  setVal(document.getElementById('v-r-otros'), v.rOtros);
+  setVal(document.getElementById('v-s-tiquete'), v.sTiquete);
+  setVal(document.getElementById('v-s-hotel'), v.sHotel);
+  setVal(document.getElementById('v-s-viaticos'), v.sViaticos);
+  setVal(document.getElementById('v-s-otros'), v.sOtros);
+  if(v.transporte){ const el=document.querySelector(`input[name="transporte"][value="${v.transporte}"]`); if(el) el.checked=true; }
+  if(v.pgTiquete){ const el=document.querySelector(`input[name="pg-tiquete"][value="${v.pgTiquete}"]`); if(el) el.checked=true; }
+  if(v.pgHotel){ const el=document.querySelector(`input[name="pg-hotel"][value="${v.pgHotel}"]`); if(el) el.checked=true; }
+  if(v.pgOtros){ const el=document.querySelector(`input[name="pg-otros"][value="${v.pgOtros}"]`); if(el) el.checked=true; }
+  if(v.estado){ const el=document.querySelector(`input[name="v-estado"][value="${v.estado}"]`); if(el) el.checked=true; }
+  calcDias();
+  setTab(1);
+}
+
+async function guardarViaje(){
+  const comercial = document.getElementById('v-comercial').value.trim();
+  const destino   = document.getElementById('v-destino').value;
+  const salida    = document.getElementById('v-salida').value;
+  if(!comercial||!destino||!salida){ alert('Completa los campos requeridos: comercial, destino y fecha.'); return; }
+
+  const tots = calcTotales();
+  const id = document.getElementById('v-id').value || 'viaje_' + Date.now();
+
+  const data = {
+    comercial, origen: document.getElementById('v-origen').value,
+    destino, salida, regreso: document.getElementById('v-regreso').value,
+    noches: safe(document.getElementById('v-noches').value),
+    dias: safe(document.getElementById('v-dias').value),
+    motivo: document.getElementById('v-motivo').value,
+    cliente: document.getElementById('v-cliente').value,
+    obs: document.getElementById('v-obs').value,
+    transporte: document.querySelector('input[name="transporte"]:checked')?.value||'',
+    aerolinea: document.getElementById('v-aerolinea').value,
+    tiquete: safe(document.getElementById('v-tiquete').value),
+    pgTiquete: document.querySelector('input[name="pg-tiquete"]:checked')?.value||'comercial',
+    hotelVal: safe(document.getElementById('v-hotel-val').value),
+    hotel: document.getElementById('v-hotel').value,
+    pgHotel: document.querySelector('input[name="pg-hotel"]:checked')?.value||'comercial',
+    viaticos: safe(document.getElementById('v-viaticos').value),
+    otros: safe(document.getElementById('v-otros').value),
+    otrosDesc: document.getElementById('v-otros-desc').value,
+    pgOtros: document.querySelector('input[name="pg-otros"]:checked')?.value||'comercial',
+    rTiquete: safe(document.getElementById('v-r-tiquete').value),
+    rHotel: safe(document.getElementById('v-r-hotel').value),
+    rViaticos: safe(document.getElementById('v-r-viaticos').value),
+    rOtros: safe(document.getElementById('v-r-otros').value),
+    sTiquete: document.getElementById('v-s-tiquete').value,
+    sHotel: document.getElementById('v-s-hotel').value,
+    sViaticos: document.getElementById('v-s-viaticos').value,
+    sOtros: document.getElementById('v-s-otros').value,
+    estado: document.querySelector('input[name="v-estado"]:checked')?.value||'pendiente',
+    estCiudad: tots.estCiudad,
+    totalReal: tots.totalReal,
+    totalEntregado: tots.entregado,
+    saldoFinal: tots.saldo,
+  };
+
+  await window._fbSave('viajes', id, data);
+  limpiarForm();
+  setTab(0);
+}
+
+// ===================== DETALLE =====================
+function verDetalle(id){
+  const v = window._viajes.find(x=>x.id===id);
+  if(!v) return;
+  document.getElementById('det-titulo').textContent = `Viaje: ${v.comercial} → ${v.destino}`;
+  document.getElementById('det-content').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
+      <div><strong>Comercial:</strong> ${v.comercial}</div>
+      <div><strong>Destino:</strong> ${v.destino}</div>
+      <div><strong>Origen:</strong> ${v.origen||'—'}</div>
+      <div><strong>Fechas:</strong> ${fmtFecha(v.salida)} → ${fmtFecha(v.regreso)}</div>
+      <div><strong>Noches:</strong> ${v.noches||0}</div>
+      <div><strong>Motivo:</strong> ${v.motivo||'—'}</div>
+      <div><strong>Cliente/Zona:</strong> ${v.cliente||'—'}</div>
+      <div><strong>Transporte:</strong> ${v.transporte||'—'} ${v.aerolinea?'/ '+v.aerolinea:''}</div>
+    </div>
+    <div style="margin-top:14px;background:var(--gl);border-radius:8px;padding:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
+      <div><div style="font-size:10px;font-weight:700;color:var(--gd);text-transform:uppercase">Tiquete</div><div style="font-size:1rem;font-weight:700;margin-top:4px">${fmtCOP(v.tiquete)}</div></div>
+      <div><div style="font-size:10px;font-weight:700;color:var(--gd);text-transform:uppercase">Hotel</div><div style="font-size:1rem;font-weight:700;margin-top:4px">${fmtCOP(v.hotelVal)}</div></div>
+      <div><div style="font-size:10px;font-weight:700;color:var(--gd);text-transform:uppercase">Viáticos</div><div style="font-size:1rem;font-weight:700;margin-top:4px">${fmtCOP(v.viaticos)}</div></div>
+      <div><div style="font-size:10px;font-weight:700;color:var(--gd);text-transform:uppercase">Otros</div><div style="font-size:1rem;font-weight:700;margin-top:4px">${fmtCOP(v.otros)}</div></div>
+      <div><div style="font-size:10px;font-weight:700;color:var(--gd);text-transform:uppercase">Total entregado</div><div style="font-size:1rem;font-weight:700;margin-top:4px">${fmtCOP(v.totalEntregado)}</div></div>
+      <div><div style="font-size:10px;font-weight:700;color:var(--gd);text-transform:uppercase">Gasto real</div><div style="font-size:1rem;font-weight:700;margin-top:4px">${fmtCOP(v.totalReal)}</div></div>
+    </div>
+    <div style="margin-top:12px;text-align:center;padding:10px;background:${safe(v.saldoFinal)>100?'#fee2e2':safe(v.saldoFinal)<-100?'#d1fae5':'#f3f4f6'};border-radius:8px">
+      <strong>Saldo final: ${fmtCOP(Math.abs(safe(v.saldoFinal)))}</strong>
+      ${safe(v.saldoFinal)>100?' (comercial debe devolver)':safe(v.saldoFinal)<-100?' (empresa debe reembolsar)':' (cuadrado)'}
+    </div>
+    <div style="margin-top:12px;font-size:12px;color:var(--gray3)">
+      <strong>Soportes:</strong> Tiquete: ${v.sTiquete||'—'} | Hotel: ${v.sHotel||'—'} | Viáticos: ${v.sViaticos||'—'} | Otros: ${v.sOtros||'—'}
+    </div>
+  `;
+  document.getElementById('modal-detalle').classList.add('open');
+}
+
+// ===================== CIUDADES =====================
+function renderCiudades(){
+  const tbody = document.getElementById('tbody-ciudades');
+  if(!tbody) return;
+  if(!window._ciudades.length){ tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--gray3)">No hay ciudades registradas. Agrega la primera.</td></tr>'; return; }
+  tbody.innerHTML = [...window._ciudades].sort((a,b)=>(a.ciudad||'').localeCompare(b.ciudad||'')).map(c=>`
+    <tr>
+      <td><strong>${c.ciudad}</strong></td>
+      <td>${fmtCOP(c.hotel)}/noche</td>
+      <td>${fmtCOP(c.tiquete)}</td>
+      <td>${fmtCOP(c.viaticos)}/día</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="editarCiudad('${c.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="confirmarEliminar('viajes_ciudades','${c.id}','Ciudad ${c.ciudad}')">🗑</button>
+      </td>
+    </tr>`).join('');
+}
+
+function abrirModalCiudad(id=null){
+  document.getElementById('mc-id').value = id||'';
+  ['mc-ciudad','mc-hotel','mc-tiquete','mc-viaticos'].forEach(f=>document.getElementById(f).value='');
+  if(id){ const c=window._ciudades.find(x=>x.id===id); if(c){
+    document.getElementById('mc-ciudad').value=c.ciudad||'';
+    document.getElementById('mc-hotel').value=c.hotel||0;
+    document.getElementById('mc-tiquete').value=c.tiquete||0;
+    document.getElementById('mc-viaticos').value=c.viaticos||0;
+  }}
+  document.getElementById('modal-ciudad').classList.add('open');
+}
+
+function editarCiudad(id){ abrirModalCiudad(id); }
+
+async function guardarCiudad(){
+  const ciudad = document.getElementById('mc-ciudad').value.trim();
+  if(!ciudad){ alert('El nombre de la ciudad es requerido.'); return; }
+  const id = document.getElementById('mc-id').value || 'ciudad_' + Date.now();
+  await window._fbSave('viajes_ciudades', id, {
+    ciudad,
+    hotel: safe(document.getElementById('mc-hotel').value),
+    tiquete: safe(document.getElementById('mc-tiquete').value),
+    viaticos: safe(document.getElementById('mc-viaticos').value),
+  });
+  cerrarModal('modal-ciudad');
+  poblarSelectCiudades();
+}
+
+// ===================== INFORME =====================
+function renderInforme(){
+  const vs = window._viajes;
+  if(!vs.length){ document.getElementById('informe-content').innerHTML='<div style="text-align:center;padding:40px;color:var(--gray3)">No hay viajes registrados.</div>'; return; }
+
+  // Por comercial
+  const porComercial = {};
+  vs.forEach(v=>{ const k=v.comercial||'—'; if(!porComercial[k]) porComercial[k]={viajes:0,entregado:0,real:0,saldo:0}; porComercial[k].viajes++; porComercial[k].entregado+=safe(v.totalEntregado); porComercial[k].real+=safe(v.totalReal); porComercial[k].saldo+=safe(v.saldoFinal); });
+  const tabCom = Object.entries(porComercial).sort((a,b)=>b[1].viajes-a[1].viajes).map(([k,d])=>
+    `<tr><td><strong>${k}</strong></td><td>${d.viajes}</td><td>${fmtCOP(d.entregado)}</td><td>${fmtCOP(d.real)}</td><td style="color:${d.saldo>0?'var(--danger)':d.saldo<0?'#16a34a':'var(--gray)'}; font-weight:600">${fmtCOP(Math.abs(d.saldo))}</td></tr>`
+  ).join('');
+
+  // Por ciudad
+  const porCiudad = {};
+  vs.forEach(v=>{ const k=v.destino||'—'; if(!porCiudad[k]) porCiudad[k]={viajes:0,real:0}; porCiudad[k].viajes++; porCiudad[k].real+=safe(v.totalReal); });
+  const tabCiu = Object.entries(porCiudad).sort((a,b)=>b[1].viajes-a[1].viajes).map(([k,d])=>
+    `<tr><td><strong>${k}</strong></td><td>${d.viajes}</td><td>${fmtCOP(d.real)}</td><td>${fmtCOP(d.real/d.viajes)}</td></tr>`
+  ).join('');
+
+  document.getElementById('informe-content').innerHTML = `
+    <div class="inf-card">
+      <div class="inf-card-hd">Por Comercial</div>
+      <div class="tbl-wrap"><table><thead><tr><th>Comercial</th><th>Viajes</th><th>Entregado</th><th>Gasto real</th><th>Saldo neto</th></tr></thead><tbody>${tabCom||'<tr><td colspan="5" style="text-align:center;color:var(--gray3);padding:16px">Sin datos</td></tr>'}</tbody></table></div>
+    </div>
+    <div class="inf-card">
+      <div class="inf-card-hd">Por Ciudad destino</div>
+      <div class="tbl-wrap"><table><thead><tr><th>Ciudad</th><th>Viajes</th><th>Total real</th><th>Promedio</th></tr></thead><tbody>${tabCiu||'<tr><td colspan="4" style="text-align:center;color:var(--gray3);padding:16px">Sin datos</td></tr>'}</tbody></table></div>
+    </div>
+  `;
+}
+
+// ===================== EXPORT =====================
+function exportExcel(){
+  if(typeof XLSX==='undefined'){ alert('Librería no disponible'); return; }
+  const data = window._viajes.map(v=>({
+    'Comercial':v.comercial,'Origen':v.origen,'Destino':v.destino,
+    'Salida':v.salida,'Regreso':v.regreso,'Motivo':v.motivo,
+    'Transporte':v.transporte,'Tiquete':v.tiquete,'Hotel':v.hotelVal,
+    'Viáticos':v.viaticos,'Otros':v.otros,'Total entregado':v.totalEntregado,
+    'Total real':v.totalReal,'Saldo final':v.saldoFinal,'Estado':v.estado
+  }));
+  const ws=XLSX.utils.json_to_sheet(data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,'Viajes',ws);
+  XLSX.writeFile(wb,`WM_Viajes_${hoy()}.xlsx`);
+}
+
+// ===================== UTILS =====================
+function cerrarModal(id){ document.getElementById(id).classList.remove('open'); }
+function confirmarEliminar(col, id, label){
+  document.getElementById('confirm-msg').textContent = `¿Eliminar "${label}"? Esta acción no se puede deshacer.`;
+  document.getElementById('confirm-ok').onclick = async ()=>{ await window._fbDelete(col, id); cerrarModal('modal-confirm'); };
+  document.getElementById('modal-confirm').classList.add('open');
+}
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
+
+init();
+</script>
+</body>
+</html>
