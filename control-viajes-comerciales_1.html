@@ -1,0 +1,1935 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>World Machinery – Control de Viajes Comerciales</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════
+   VARIABLES & RESET
+════════════════════════════════════════════════════ */
+:root {
+  --g:        #8DC63F;
+  --g-dk:     #6A9A28;
+  --g-cl:     #C5E495;
+  --g-pl:     #EDF6DA;
+  --char:     #1E1E1E;
+  --char2:    #2F2F2F;
+  --gray1:    #4A4A4A;
+  --gray2:    #787878;
+  --gray3:    #B0B0B0;
+  --gray4:    #D8D8D8;
+  --gray5:    #F2F2F2;
+  --white:    #FFFFFF;
+  --red:      #C0392B;
+  --red-pl:   #FDECEB;
+  --amber:    #D68910;
+  --amb-pl:   #FEF9E7;
+  --blue:     #2471A3;
+  --blue-pl:  #EBF5FB;
+  --r:        6px;
+  --sh-sm:    0 1px 4px rgba(0,0,0,.09);
+  --sh-md:    0 3px 14px rgba(0,0,0,.11);
+  --sh-lg:    0 8px 32px rgba(0,0,0,.13);
+  --font:     'DM Sans', sans-serif;
+  --font-h:   'Rajdhani', sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:#E8E8E8;color:var(--char);font-size:14px;min-height:100vh}
+button{cursor:pointer;font-family:var(--font)}
+input,select,textarea{font-family:var(--font)}
+a{color:inherit;text-decoration:none}
+
+/* ═══════════════════════════════════════════════════
+   LAYOUT PRINCIPAL
+════════════════════════════════════════════════════ */
+.app-shell{display:flex;flex-direction:column;min-height:100vh}
+
+/* HEADER */
+.hdr{
+  background:var(--char);
+  color:var(--white);
+  height:64px;
+  display:flex;align-items:center;gap:14px;
+  padding:0 28px;
+  position:sticky;top:0;z-index:200;
+  box-shadow:0 2px 12px rgba(0,0,0,.3);
+}
+.hdr-logo{
+  width:40px;height:40px;border-radius:50%;
+  background:var(--g);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.hdr-logo svg{width:22px;height:22px}
+.hdr-title{font-family:var(--font-h);font-size:20px;font-weight:700;letter-spacing:.3px;line-height:1}
+.hdr-sub{font-size:10px;color:var(--gray3);letter-spacing:.4px;margin-top:1px}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.hdr-badge{
+  background:rgba(141,198,63,.15);border:1px solid rgba(141,198,63,.35);
+  color:var(--g-cl);font-family:var(--font-h);font-size:12px;font-weight:600;
+  letter-spacing:1px;padding:4px 12px;border-radius:20px;
+}
+.hdr-pass-status{font-size:11px;color:var(--gray3);display:flex;align-items:center;gap:5px}
+.hdr-pass-status .dot{width:7px;height:7px;border-radius:50%;background:var(--red)}
+.hdr-pass-status.ok .dot{background:var(--g)}
+
+/* TABS NAV */
+.nav-tabs{
+  background:var(--white);
+  border-bottom:2px solid var(--gray4);
+  display:flex;padding:0 28px;gap:0;
+  overflow-x:auto;
+}
+.nav-tabs::-webkit-scrollbar{height:0}
+.tab-btn{
+  font-family:var(--font-h);font-size:13px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--gray2);background:none;border:none;
+  padding:0 20px;height:46px;
+  border-bottom:3px solid transparent;
+  display:flex;align-items:center;gap:7px;
+  white-space:nowrap;transition:color .18s,border-color .18s;
+  margin-bottom:-2px;
+}
+.tab-btn svg{width:15px;height:15px}
+.tab-btn:hover{color:var(--char)}
+.tab-btn.active{color:var(--g-dk);border-bottom-color:var(--g)}
+
+/* CONTENT */
+.content{flex:1}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.container{max-width:1380px;margin:0 auto;padding:24px 28px}
+
+/* ═══════════════════════════════════════════════════
+   COMPONENTS
+════════════════════════════════════════════════════ */
+
+/* Section heading */
+.sec-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.sec-head h2{font-family:var(--font-h);font-size:19px;font-weight:700;color:var(--char)}
+.pill{background:var(--g-pl);color:var(--g-dk);border:1px solid var(--g-cl);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;letter-spacing:.4px}
+.divider{height:2px;background:linear-gradient(90deg,var(--g) 0%,var(--gray4) 55%,transparent 100%);margin-bottom:20px;border-radius:2px}
+
+/* Card */
+.card{background:var(--white);border-radius:var(--r);box-shadow:var(--sh-sm);border:1px solid var(--gray4);overflow:hidden}
+.card-hd{background:var(--char);color:var(--white);font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;padding:9px 16px;display:flex;align-items:center;gap:8px}
+.card-hd .dot{width:7px;height:7px;border-radius:50%;background:var(--g);flex-shrink:0}
+
+/* Grid helpers */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:960px){.grid-4{grid-template-columns:1fr 1fr}.grid-3{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
+
+/* Form controls */
+.fg{margin-bottom:13px}
+.fg label{display:block;font-size:11px;font-weight:600;letter-spacing:.35px;text-transform:uppercase;color:var(--gray1);margin-bottom:5px}
+.fc{width:100%;background:var(--white);border:1.5px solid var(--gray4);border-radius:var(--r);padding:8px 11px;font-size:13px;color:var(--char);outline:none;transition:border-color .18s,box-shadow .18s}
+.fc:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(141,198,63,.15)}
+.fc:disabled{background:var(--gray5);color:var(--gray2);cursor:not-allowed}
+.fc.calc{background:var(--g-pl);border-color:var(--g-cl);font-weight:600;color:var(--g-dk)}
+.fc-small{padding:6px 9px;font-size:12px}
+textarea.fc{resize:vertical;min-height:70px}
+
+.radio-group{display:flex;gap:8px;flex-wrap:wrap}
+.radio-btn{
+  display:flex;align-items:center;gap:5px;
+  padding:6px 12px;border:1.5px solid var(--gray4);border-radius:var(--r);
+  font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;
+  background:var(--white);
+}
+.radio-btn:has(input:checked){background:var(--g-pl);border-color:var(--g);color:var(--g-dk);font-weight:600}
+.radio-btn input{display:none}
+
+.checkbox-row{display:flex;align-items:center;gap:7px;padding:5px 0;cursor:pointer;font-size:12px}
+.checkbox-row input[type=checkbox]{width:15px;height:15px;accent-color:var(--g);cursor:pointer}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:8px 18px;border-radius:var(--r);border:none;transition:all .18s;white-space:nowrap}
+.btn svg{width:14px;height:14px}
+.btn-primary{background:var(--g);color:var(--white)}
+.btn-primary:hover{background:var(--g-dk);transform:translateY(-1px);box-shadow:var(--sh-sm)}
+.btn-secondary{background:var(--char);color:var(--white)}
+.btn-secondary:hover{background:var(--char2)}
+.btn-ghost{background:var(--gray5);color:var(--gray1);border:1px solid var(--gray4)}
+.btn-ghost:hover{background:var(--gray4)}
+.btn-danger{background:var(--red-pl);color:var(--red);border:1px solid #f5b7b1}
+.btn-danger:hover{background:#fad5d5}
+.btn-sm{padding:5px 12px;font-size:11px}
+.btn-xs{padding:3px 8px;font-size:10px}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+
+/* Tables */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{background:var(--gray5);color:var(--gray1);font-family:var(--font-h);font-weight:700;letter-spacing:.5px;text-transform:uppercase;font-size:10px;padding:9px 12px;text-align:left;border-bottom:2px solid var(--gray4);white-space:nowrap}
+thead th:first-child{border-left:3px solid var(--g)}
+tbody tr{transition:background .12s}
+tbody tr:hover{background:var(--g-pl)!important}
+tbody tr:nth-child(even){background:var(--gray5)}
+td{padding:8px 12px;border-bottom:1px solid var(--gray4);vertical-align:middle}
+td.r{text-align:right;font-variant-numeric:tabular-nums}
+td.c{text-align:center}
+
+/* Status badges */
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;white-space:nowrap}
+.badge-pend{background:var(--amb-pl);color:var(--amber)}
+.badge-dev{background:var(--g-pl);color:var(--g-dk)}
+.badge-favor{background:var(--red-pl);color:var(--red)}
+.badge-cerr{background:var(--blue-pl);color:var(--blue)}
+
+/* Alert */
+.alert{border-radius:var(--r);padding:10px 14px;font-size:12px;margin-bottom:12px;display:flex;align-items:flex-start;gap:8px}
+.alert-warn{background:var(--amb-pl);border-left:3px solid var(--amber);color:#7d4e00}
+.alert-ok{background:var(--g-pl);border-left:3px solid var(--g);color:var(--g-dk)}
+.alert-err{background:var(--red-pl);border-left:3px solid var(--red);color:var(--red)}
+.alert-info{background:var(--blue-pl);border-left:3px solid var(--blue);color:var(--blue)}
+.alert svg{width:14px;height:14px;flex-shrink:0;margin-top:1px}
+
+/* KPI Cards */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--white);border-radius:var(--r);border:1px solid var(--gray4);padding:14px 16px;box-shadow:var(--sh-sm)}
+.kpi-lbl{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--gray2);margin-bottom:4px}
+.kpi-val{font-family:var(--font-h);font-size:22px;font-weight:700;line-height:1;color:var(--char)}
+.kpi-sub{font-size:10px;color:var(--gray2);margin-top:3px}
+.kpi.g{border-left:4px solid var(--g)}.kpi.g .kpi-val{color:var(--g-dk)}
+.kpi.r{border-left:4px solid var(--red)}.kpi.r .kpi-val{color:var(--red)}
+.kpi.a{border-left:4px solid var(--amber)}
+.kpi.b{border-left:4px solid var(--blue)}.kpi.b .kpi-val{color:var(--blue)}
+
+/* Note box */
+.note{background:var(--g-pl);border-left:3px solid var(--g);border-radius:0 var(--r) var(--r) 0;padding:9px 13px;font-size:12px;color:var(--gray1);margin-bottom:16px}
+
+/* Section separator */
+.form-section{margin-bottom:20px}
+.form-section-title{font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--white);background:var(--char2);padding:7px 12px;border-radius:var(--r) var(--r) 0 0;display:flex;align-items:center;gap:7px}
+.form-section-title .dot{width:6px;height:6px;border-radius:50%;background:var(--g)}
+.form-section-body{border:1px solid var(--gray4);border-top:none;border-radius:0 0 var(--r) var(--r);padding:14px}
+
+/* Pago método indicator */
+.pago-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pago-row .pago-label{font-size:11px;color:var(--gray2);font-weight:600;min-width:120px}
+
+/* Saldo display */
+.saldo-box{border-radius:var(--r);padding:12px 16px;text-align:center}
+.saldo-box .saldo-title{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+.saldo-box .saldo-val{font-family:var(--font-h);font-size:26px;font-weight:700;line-height:1}
+.saldo-dev{background:var(--g-pl);border:1px solid var(--g-cl);color:var(--g-dk)}
+.saldo-favor{background:var(--red-pl);border:1px solid #f5b7b1;color:var(--red)}
+.saldo-cero{background:var(--gray5);border:1px solid var(--gray4);color:var(--gray2)}
+
+/* Modal */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:20px}
+.overlay.open{display:flex}
+.modal{background:var(--white);border-radius:10px;width:900px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--sh-lg);animation:mUp .22s ease}
+.modal.modal-sm{width:420px}
+@keyframes mUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.modal-hd{background:var(--char);color:var(--white);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
+.modal-hd h3{font-family:var(--font-h);font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.modal-hd .close-btn{background:none;border:none;color:var(--gray3);font-size:22px;line-height:1;padding:0 4px;transition:color .15s}
+.modal-hd .close-btn:hover{color:var(--white)}
+.modal-body{padding:22px}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--gray4);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--white)}
+
+/* Print styles */
+@media print{
+  .hdr,.nav-tabs,.no-print{display:none!important}
+  .modal{box-shadow:none;border:none;max-height:none;overflow:visible}
+  .overlay{position:static;background:none;display:block!important;padding:0}
+  body{background:white}
+  .modal-hd{color:black!important;background:white!important;border-bottom:2px solid #000}
+  .modal-foot{display:none!important}
+  * {-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+
+/* Resumen viaje en tabla */
+.mini-desglose{font-size:10px;color:var(--gray2)}
+.mini-desglose span{display:inline-block;margin-right:8px}
+
+/* Empty state */
+.empty-state{text-align:center;padding:48px 24px;color:var(--gray2)}
+.empty-state svg{width:48px;height:48px;color:var(--gray4);margin-bottom:12px}
+.empty-state p{font-size:13px}
+
+/* Sticky form footer */
+.form-footer{
+  position:sticky;bottom:0;background:var(--white);border-top:2px solid var(--gray4);
+  padding:14px 22px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+  z-index:10;margin-top:20px;
+}
+
+/* Informe PDF */
+.informe-section{margin-bottom:20px}
+.informe-section h4{font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--g-dk);border-bottom:2px solid var(--g-cl);padding-bottom:5px;margin-bottom:10px}
+.informe-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--gray5);font-size:12px;gap:10px}
+.informe-row .lbl{color:var(--gray2);font-weight:500;flex-shrink:0}
+.informe-row .val{font-weight:600;text-align:right}
+.informe-total{background:var(--char);color:var(--white);padding:10px 14px;border-radius:var(--r);display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.informe-total .lbl{font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--gray3)}
+.informe-total .val{font-family:var(--font-h);font-size:20px;font-weight:700;color:var(--g)}
+
+/* Adjuntos */
+.adjunto-prev { display:flex; align-items:center; gap:10px; }
+.adjunto-prev img { max-width:180px; max-height:130px; border-radius:4px; border:1px solid var(--gray4); object-fit:contain; background:var(--gray5); }
+.adjunto-prev .adjunto-nombre { font-size:11px; color:var(--gray1); font-weight:600; }
+.adjunto-prev .adjunto-tipo { font-size:10px; color:var(--gray3); }
+
+/* En el informe impreso, los adjuntos se muestran grandes */
+@media print {
+  /* Página 1: solo el informe, sin adjuntos */
+  .adjuntos-print-section { display: none; }
+  .adjuntos-print-section { display: block !important; }
+
+  /* Cada adjunto en su propia hoja */
+  .adjunto-pagina {
+    page-break-before: always;
+    page-break-inside: avoid;
+    padding: 24px;
+  }
+  .adjunto-pagina:first-child { page-break-before: always; }
+
+  .adjunto-pagina img {
+    max-width: 100%;
+    max-height: 85vh;
+    display: block;
+    margin: 0 auto;
+    object-fit: contain;
+  }
+
+  /* PDFs en página impresa: iframe a pantalla completa */
+  .adjunto-pagina iframe {
+    width: 100%;
+    height: 85vh;
+    border: none;
+    display: block;
+  }
+
+  /* Ocultar la sección inline de adjuntos que está dentro del grid */
+  .adjuntos-inline { display: none !important; }
+
+  .saldo-box { border:1px solid #ccc !important; }
+  .informe-total { background:#333 !important; color:white !important; }
+  .modal { box-shadow:none; border:none; max-height:none; overflow:visible; width:100% !important; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--gray5)}
+::-webkit-scrollbar-thumb{background:var(--gray3);border-radius:4px}
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header class="hdr">
+  <div class="hdr-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  </div>
+  <div>
+    <div class="hdr-title">World Machinery</div>
+    <div class="hdr-sub">CONTROL DE VIAJES COMERCIALES</div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-pass-status" id="hdr-pass-status">
+      <span class="dot"></span>
+      <span>Sin sesión admin</span>
+    </div>
+    <button class="btn btn-ghost btn-sm no-print" id="btn-login" onclick="abrirLogin()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Admin
+    </button>
+    <div class="hdr-badge">COP</div>
+  </div>
+</header>
+
+<!-- ═══════════════ TABS NAV ═══════════════ -->
+
+<!-- SYNC BAR -->
+<div id="sync-bar" style="display:none;background:var(--blue);color:white;font-size:12px;font-weight:600;padding:6px 20px;align-items:center;gap:8px;font-family:var(--font-h);letter-spacing:.4px;z-index:150">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+  <span class="sync-msg">Conectando...</span>
+</div>
+<style>@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style>
+<nav class="nav-tabs" id="nav-tabs">
+  <button class="tab-btn active" onclick="goTab('viajes',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Viajes
+  </button>
+  <button class="tab-btn" onclick="goTab('nuevo',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    Nuevo viaje
+  </button>
+  <button class="tab-btn" onclick="goTab('ciudades',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    Ciudades
+  </button>
+  <button class="tab-btn" onclick="goTab('informe',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+    Informe global
+  </button>
+</nav>
+
+<!-- ═══════════════════════════════════════
+     TAB 1 – LISTA DE VIAJES
+════════════════════════════════════════ -->
+<div class="tab-panel active content" id="tab-viajes">
+  <div class="container">
+
+    <!-- KPIs -->
+    <div class="kpis" id="kpis-viajes" style="margin-bottom:20px"></div>
+
+    <!-- Filtros -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-hd"><span class="dot"></span>Filtros</div>
+      <div style="padding:12px 16px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <div class="fg" style="margin:0;flex:1;min-width:160px">
+          <label>Comercial</label>
+          <input type="text" id="f-comercial" class="fc fc-small" placeholder="Buscar..." oninput="renderViajes()">
+        </div>
+        <div class="fg" style="margin:0;flex:1;min-width:140px">
+          <label>Ciudad</label>
+          <select id="f-ciudad" class="fc fc-small" onchange="renderViajes()">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="fg" style="margin:0;flex:1;min-width:140px">
+          <label>Estado</label>
+          <select id="f-estado" class="fc fc-small" onchange="renderViajes()">
+            <option value="">Todos</option>
+            <option value="pendiente">Pendiente soportes</option>
+            <option value="devolver">Saldo a devolver</option>
+            <option value="favor">Saldo a favor</option>
+            <option value="cerrado">Cerrado</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="limpiarFiltros()">Limpiar</button>
+        <button class="btn btn-primary btn-sm no-print" onclick="goTab('nuevo',document.querySelectorAll('.tab-btn')[1]);limpiarForm()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nuevo viaje
+        </button>
+        <button class="btn btn-ghost btn-sm no-print" onclick="exportarCSVGlobal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          CSV
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="card">
+      <div class="card-hd"><span class="dot"></span>Registro de viajes <span id="reg-count" style="margin-left:6px;opacity:.7;font-size:11px"></span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Comercial</th>
+              <th>Ciudad</th>
+              <th>Fechas</th>
+              <th>Hotel / Aerolínea</th>
+              <th>Est. ciudad</th>
+              <th>Total real</th>
+              <th>Entregado</th>
+              <th>Saldo final</th>
+              <th>Estado</th>
+              <th class="no-print">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-viajes">
+            <tr>
+              <td colspan="11">
+                <div class="empty-state">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <p>No hay viajes registrados aún.</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TAB 2 – NUEVO / EDITAR VIAJE
+════════════════════════════════════════ -->
+<div class="tab-panel content" id="tab-nuevo">
+<div class="container">
+<input type="hidden" id="edit-id" value="">
+
+<div id="form-alert" style="display:none"></div>
+
+<!-- ── SECCIÓN 1: DATOS GENERALES ── -->
+<div class="form-section">
+  <div class="form-section-title"><span class="dot"></span>1. Datos generales del viaje</div>
+  <div class="form-section-body">
+    <div class="grid-3">
+      <div class="fg"><label>Nombre del comercial *</label><input type="text" id="v-comercial" class="fc" placeholder="Nombre completo"></div>
+      <div class="fg"><label>Ciudad de origen *</label>
+        <select id="v-origen" class="fc"><option value="">Selecciona...</option></select>
+      </div>
+      <div class="fg"><label>Ciudad de destino *</label>
+        <select id="v-destino" class="fc" onchange="onCiudadChange()"><option value="">Selecciona...</option></select>
+      </div>
+    </div>
+    <div class="grid-4">
+      <div class="fg"><label>Fecha de salida *</label><input type="date" id="v-salida" class="fc" onchange="calcFechas()"></div>
+      <div class="fg"><label>Fecha de regreso *</label><input type="date" id="v-regreso" class="fc" onchange="calcFechas()"></div>
+      <div class="fg"><label>Noches (auto)</label><input type="number" id="v-noches" class="fc calc" readonly></div>
+      <div class="fg"><label>Días viáticos (auto)</label><input type="number" id="v-dias" class="fc calc" readonly></div>
+    </div>
+    <div class="grid-3">
+      <div class="fg"><label>Motivo del viaje *</label><input type="text" id="v-motivo" class="fc" placeholder="Ej: Visita clientes zona norte"></div>
+      <div class="fg"><label>Cliente o zona visitada</label><input type="text" id="v-cliente" class="fc" placeholder="Ej: Zona industrial Bogotá"></div>
+      <div class="fg"><label>Observaciones generales</label><input type="text" id="v-obs" class="fc" placeholder="Notas adicionales"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SECCIÓN 2: TRANSPORTE ── -->
+<div class="form-section">
+  <div class="form-section-title"><span class="dot"></span>2. Transporte</div>
+  <div class="form-section-body">
+    <div class="grid-2">
+      <div class="fg">
+        <label>Medio de transporte *</label>
+        <div class="radio-group">
+          <label class="radio-btn"><input type="radio" name="transporte" value="avion" onchange="onTranspChange()"> ✈️ Avión</label>
+          <label class="radio-btn"><input type="radio" name="transporte" value="bus" onchange="onTranspChange()"> 🚌 Bus</label>
+          <label class="radio-btn"><input type="radio" name="transporte" value="carro" onchange="onTranspChange()"> 🚗 Carro particular</label>
+          <label class="radio-btn"><input type="radio" name="transporte" value="otro" onchange="onTranspChange()"> Otro</label>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Aerolínea / Empresa transportadora</label>
+        <select id="v-aerolinea" class="fc">
+          <option value="">No aplica / por definir</option>
+          <option>Avianca</option><option>LATAM</option><option>Wingo</option>
+          <option>EasyFly</option><option>Satena</option><option>Ultra Air</option>
+          <option>Flota Magdalena</option><option>Expreso Bolivariano</option>
+          <option>Berlinas</option><option>Otra</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="fg">
+        <label>Valor real tiquete (COP)</label>
+        <input type="number" id="v-tiquete" class="fc" value="0" min="0" step="1000" oninput="calcTotales()">
+      </div>
+      <div class="fg">
+        <label>Tiquete pagado por</label>
+        <div class="radio-group">
+          <label class="radio-btn"><input type="radio" name="pg-tiquete" value="empresa"> Empresa</label>
+          <label class="radio-btn"><input type="radio" name="pg-tiquete" value="comercial" checked> Entregado al comercial</label>
+        </div>
+      </div>
+      <div class="fg">
+        <label>Referencia tiquete estimado</label>
+        <input type="text" id="v-tiq-est" class="fc calc" readonly placeholder="Selecciona ciudad...">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SECCIÓN 3: HOTEL ── -->
+<div class="form-section">
+  <div class="form-section-title"><span class="dot"></span>3. Alojamiento</div>
+  <div class="form-section-body">
+    <div class="grid-3">
+      <div class="fg"><label>Hotel utilizado</label><input type="text" id="v-hotel" class="fc" placeholder="Nombre del hotel"></div>
+      <div class="fg">
+        <label>Valor real total hotel (COP)</label>
+        <input type="number" id="v-hotel-val" class="fc" value="0" min="0" step="1000" oninput="calcTotales()">
+      </div>
+      <div class="fg">
+        <label>Referencia hotel estimado</label>
+        <input type="text" id="v-hotel-est" class="fc calc" readonly placeholder="Selecciona ciudad y fechas...">
+      </div>
+    </div>
+    <div class="fg">
+      <label>Hotel pagado por</label>
+      <div class="radio-group">
+        <label class="radio-btn"><input type="radio" name="pg-hotel" value="empresa"> Pagado directamente por la empresa</label>
+        <label class="radio-btn"><input type="radio" name="pg-hotel" value="comercial" checked> Entregado al comercial para pagar</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SECCIÓN 4: VIÁTICOS Y OTROS ── -->
+<div class="form-section">
+  <div class="form-section-title"><span class="dot"></span>4. Viáticos y otros gastos</div>
+  <div class="form-section-body">
+    <div class="grid-4">
+      <div class="fg">
+        <label>Tarifa diaria referencia</label>
+        <input type="text" id="v-tarifa-ref" class="fc calc" readonly placeholder="Selecciona ciudad...">
+      </div>
+      <div class="fg">
+        <label>Viáticos estimados (auto)</label>
+        <input type="text" id="v-viat-est" class="fc calc" readonly placeholder="Selecciona ciudad y fechas...">
+      </div>
+      <div class="fg">
+        <label>Viáticos reales entregados (COP)</label>
+        <input type="number" id="v-viaticos" class="fc" value="0" min="0" step="1000" oninput="calcTotales()">
+      </div>
+      <div class="fg">
+        <label>Viáticos entregados al</label>
+        <div class="radio-group">
+          <label class="radio-btn"><input type="radio" name="pg-viaticos" value="comercial" checked> Comercial</label>
+        </div>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="fg">
+        <label>Otros gastos autorizados (COP)</label>
+        <input type="number" id="v-otros" class="fc" value="0" min="0" step="1000" oninput="calcTotales()">
+      </div>
+      <div class="fg">
+        <label>Descripción otros gastos</label>
+        <input type="text" id="v-otros-desc" class="fc" placeholder="Ej: Peajes, parqueadero...">
+      </div>
+      <div class="fg">
+        <label>Otros gastos pagados por</label>
+        <div class="radio-group">
+          <label class="radio-btn"><input type="radio" name="pg-otros" value="empresa"> Empresa</label>
+          <label class="radio-btn"><input type="radio" name="pg-otros" value="comercial" checked> Comercial</label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SECCIÓN 5: RESUMEN FINANCIERO ── -->
+<div class="form-section">
+  <div class="form-section-title"><span class="dot"></span>5. Anticipo entregado y gasto real del comercial</div>
+  <div class="form-section-body">
+    <div class="grid-4">
+      <div class="fg"><label>Total estimado ciudad</label><input type="number" id="v-total-est" class="fc calc" readonly></div>
+      <div class="fg"><label>Total real del viaje</label><input type="number" id="v-total-real" class="fc calc" readonly></div>
+      <div class="fg"><label>Pagado directo empresa</label><input type="number" id="v-pag-empresa" class="fc calc" readonly></div>
+      <div class="fg"><label>Total entregado al comercial</label><input type="number" id="v-pag-comercial" class="fc calc" readonly></div>
+    </div>
+    <div style="background:var(--amb-pl);border:1.5px solid #f0d080;border-radius:var(--r);padding:14px;margin-top:8px">
+      <div style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--amber);margin-bottom:10px">
+        💵 Gasto real declarado por el comercial (al regreso)
+      </div>
+      <div class="grid-4">
+        <div class="fg" style="margin-bottom:0">
+          <label>Gasto real en tiquete</label>
+          <input type="number" id="vr-tiquete" class="fc" value="0" min="0" step="1000" oninput="calcSaldoFinal()" placeholder="0">
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label>Gasto real en hotel</label>
+          <input type="number" id="vr-hotel" class="fc" value="0" min="0" step="1000" oninput="calcSaldoFinal()" placeholder="0">
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label>Gasto real en viáticos</label>
+          <input type="number" id="vr-viaticos" class="fc" value="0" min="0" step="1000" oninput="calcSaldoFinal()" placeholder="0">
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label>Gasto real otros</label>
+          <input type="number" id="vr-otros" class="fc" value="0" min="0" step="1000" oninput="calcSaldoFinal()" placeholder="0">
+        </div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="font-size:12px;color:var(--gray1)">
+          Total gasto real comercial: <strong id="vr-total-txt" style="font-family:var(--font-h);font-size:16px">$0</strong>
+        </div>
+        <div style="font-size:11px;color:var(--gray2)">Anticipo entregado: <strong id="vr-anticipo-txt">$0</strong></div>
+      </div>
+    </div>
+    <div id="saldo-display" style="margin-top:10px"></div>
+    <div id="alerta-presupuesto" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- ── SECCIÓN 6: SOPORTES Y ADJUNTOS ── -->
+<div class="form-section">
+  <div class="form-section-title"><span class="dot"></span>6. Control de soportes y adjuntos</div>
+  <div class="form-section-body">
+    <div class="note" style="margin-bottom:14px">📎 Adjunta imágenes o PDF de cada soporte. Los archivos quedan guardados y se muestran en el informe / PDF.</div>
+
+    <!-- Tiquete -->
+    <div style="border:1px solid var(--gray4);border-radius:var(--r);margin-bottom:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--gray5);border-bottom:1px solid var(--gray4)">
+        <label class="checkbox-row" style="margin:0;padding:0;gap:8px">
+          <input type="checkbox" id="s-tiquete"> <strong>✈️ Soporte de tiquete</strong>
+        </label>
+        <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+          <label class="btn btn-ghost btn-xs no-print" style="cursor:pointer;margin:0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Adjuntar archivo
+            <input type="file" accept="image/*,.pdf" style="display:none" onchange="adjuntarSoporte('tiquete',this)">
+          </label>
+          <button class="btn btn-danger btn-xs no-print" id="btn-del-tiquete" style="display:none" onclick="borrarSoporte('tiquete')">✕ Quitar</button>
+        </div>
+      </div>
+      <div id="prev-tiquete" style="padding:8px 14px;min-height:36px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--gray2)">Sin archivo adjunto</div>
+    </div>
+
+    <!-- Hotel -->
+    <div style="border:1px solid var(--gray4);border-radius:var(--r);margin-bottom:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--gray5);border-bottom:1px solid var(--gray4)">
+        <label class="checkbox-row" style="margin:0;padding:0;gap:8px">
+          <input type="checkbox" id="s-hotel"> <strong>🏨 Soporte de hotel</strong>
+        </label>
+        <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+          <label class="btn btn-ghost btn-xs no-print" style="cursor:pointer;margin:0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Adjuntar archivo
+            <input type="file" accept="image/*,.pdf" style="display:none" onchange="adjuntarSoporte('hotel',this)">
+          </label>
+          <button class="btn btn-danger btn-xs no-print" id="btn-del-hotel" style="display:none" onclick="borrarSoporte('hotel')">✕ Quitar</button>
+        </div>
+      </div>
+      <div id="prev-hotel" style="padding:8px 14px;min-height:36px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--gray2)">Sin archivo adjunto</div>
+    </div>
+
+    <!-- Viáticos -->
+    <div style="border:1px solid var(--gray4);border-radius:var(--r);margin-bottom:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--gray5);border-bottom:1px solid var(--gray4)">
+        <label class="checkbox-row" style="margin:0;padding:0;gap:8px">
+          <input type="checkbox" id="s-viaticos"> <strong>🍽️ Soporte de viáticos</strong>
+        </label>
+        <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+          <label class="btn btn-ghost btn-xs no-print" style="cursor:pointer;margin:0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Adjuntar archivo
+            <input type="file" accept="image/*,.pdf" style="display:none" onchange="adjuntarSoporte('viaticos',this)">
+          </label>
+          <button class="btn btn-danger btn-xs no-print" id="btn-del-viaticos" style="display:none" onclick="borrarSoporte('viaticos')">✕ Quitar</button>
+        </div>
+      </div>
+      <div id="prev-viaticos" style="padding:8px 14px;min-height:36px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--gray2)">Sin archivo adjunto</div>
+    </div>
+
+    <!-- Otros -->
+    <div style="border:1px solid var(--gray4);border-radius:var(--r);margin-bottom:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--gray5);border-bottom:1px solid var(--gray4)">
+        <label class="checkbox-row" style="margin:0;padding:0;gap:8px">
+          <input type="checkbox" id="s-otros"> <strong>📋 Soporte otros gastos</strong>
+        </label>
+        <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+          <label class="btn btn-ghost btn-xs no-print" style="cursor:pointer;margin:0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Adjuntar archivo
+            <input type="file" accept="image/*,.pdf" style="display:none" onchange="adjuntarSoporte('otros',this)">
+          </label>
+          <button class="btn btn-danger btn-xs no-print" id="btn-del-otros" style="display:none" onclick="borrarSoporte('otros')">✕ Quitar</button>
+        </div>
+      </div>
+      <div id="prev-otros" style="padding:8px 14px;min-height:36px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--gray2)">Sin archivo adjunto</div>
+    </div>
+
+    <div class="fg" style="margin-top:4px">
+      <label>Observaciones sobre soportes pendientes</label>
+      <textarea id="v-obs-soportes" class="fc" placeholder="Indica qué soportes faltan o notas importantes..."></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- Footer sticky -->
+<div class="form-footer no-print">
+  <button class="btn btn-primary" onclick="guardarViaje()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    Guardar viaje
+  </button>
+  <button class="btn btn-ghost" onclick="limpiarForm()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.3"/></svg>
+    Limpiar formulario
+  </button>
+  <span id="form-estado-txt" style="font-size:12px;color:var(--gray2);margin-left:auto"></span>
+</div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TAB 3 – CIUDADES Y TARIFAS
+════════════════════════════════════════ -->
+<div class="tab-panel content" id="tab-ciudades">
+  <div class="container">
+    <div class="sec-head"><h2>Ciudades y Tarifas</h2><span class="pill">Editable por admin</span></div>
+    <div class="divider"></div>
+    <div class="note">🔑 Solo el administrador puede editar estas tarifas. Los valores son de referencia interna.</div>
+    <div class="card">
+      <div class="card-hd"><span class="dot"></span>Base de ciudades (valores en COP)</div>
+      <div class="tbl-wrap">
+        <table id="tbl-ciudades">
+          <thead><tr>
+            <th>Ciudad</th>
+            <th>Hotel mín/noche</th>
+            <th>Tiquete estimado</th>
+            <th>Viáticos/día</th>
+            <th class="no-print" id="th-accion-ciudad"></th>
+          </tr></thead>
+          <tbody id="tbody-ciudades"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="btn-row no-print" style="margin-top:14px">
+      <button class="btn btn-primary" onclick="pedirAdminY(abrirModalCiudad)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Agregar ciudad
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TAB 4 – INFORME GLOBAL
+════════════════════════════════════════ -->
+<div class="tab-panel content" id="tab-informe">
+  <div class="container">
+    <div class="sec-head"><h2>Informe Global</h2><span class="pill" id="inf-count-pill"></span></div>
+    <div class="divider"></div>
+    <div class="kpis" id="kpis-informe" style="margin-bottom:20px"></div>
+    <div class="grid-2" style="margin-bottom:20px;gap:16px">
+      <div class="card">
+        <div class="card-hd"><span class="dot"></span>Por comercial</div>
+        <div class="tbl-wrap"><table><thead><tr><th>Comercial</th><th>Viajes</th><th>Total entregado</th><th>Gasto real</th><th>Saldo neto</th></tr></thead><tbody id="inf-tbl-comercial"></tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="dot"></span>Por ciudad destino</div>
+        <div class="tbl-wrap"><table><thead><tr><th>Ciudad</th><th>Viajes</th><th>Total real</th><th>Promedio</th></tr></thead><tbody id="inf-tbl-ciudad"></tbody></table></div>
+      </div>
+    </div>
+    <div class="grid-2" style="gap:16px">
+      <div class="card">
+        <div class="card-hd"><span class="dot"></span>Por aerolínea / transportadora</div>
+        <div class="tbl-wrap"><table><thead><tr><th>Transportadora</th><th>Viajes</th><th>Total tiquetes</th></tr></thead><tbody id="inf-tbl-aero"></tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="dot"></span>Por hotel</div>
+        <div class="tbl-wrap"><table><thead><tr><th>Hotel</th><th>Ciudad</th><th>Estadías</th><th>Total hotel</th></tr></thead><tbody id="inf-tbl-hotel"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end app-shell -->
+
+<!-- ═══════════════════════════════════════
+     MODAL – DETALLE / INFORME VIAJE
+════════════════════════════════════════ -->
+<div class="overlay" id="modal-detalle">
+  <div class="modal">
+    <div class="modal-hd">
+      <h3>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Informe de Viaje
+      </h3>
+      <button class="close-btn" onclick="cerrarModal('modal-detalle')">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-detalle-body"></div>
+    <div class="modal-foot no-print">
+      <button class="btn btn-ghost btn-sm" onclick="cerrarModal('modal-detalle')">Cerrar</button>
+      <button class="btn btn-secondary btn-sm" onclick="window.print()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Imprimir / PDF
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODAL – CONTRASEÑA ADMIN
+════════════════════════════════════════ -->
+<div class="overlay" id="modal-pass">
+  <div class="modal modal-sm">
+    <div class="modal-hd">
+      <h3>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--g)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Acceso administrador
+      </h3>
+      <button class="close-btn" onclick="cerrarModal('modal-pass')">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:20px">
+      <div class="fg">
+        <label>Contraseña</label>
+        <input type="password" id="pass-input" class="fc" placeholder="Ingresa la contraseña" onkeydown="if(event.key==='Enter')verificarPass()">
+      </div>
+      <div id="pass-error" style="color:var(--red);font-size:12px;display:none;margin-top:4px">❌ Contraseña incorrecta.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" onclick="cerrarModal('modal-pass')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="verificarPass()">Ingresar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODAL – CIUDAD
+════════════════════════════════════════ -->
+<div class="overlay" id="modal-ciudad">
+  <div class="modal modal-sm">
+    <div class="modal-hd">
+      <h3>Ciudad / Tarifa</h3>
+      <button class="close-btn" onclick="cerrarModal('modal-ciudad')">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:20px">
+      <input type="hidden" id="c-idx">
+      <div class="fg"><label>Ciudad *</label><input type="text" id="c-nombre" class="fc" placeholder="Nombre de la ciudad"></div>
+      <div class="fg"><label>Hotel mínimo/noche (COP)</label><input type="number" id="c-hotel" class="fc" value="0" min="0" step="5000"></div>
+      <div class="fg"><label>Tiquete estimado (COP)</label><input type="number" id="c-tiquete" class="fc" value="0" min="0" step="5000"></div>
+      <div class="fg"><label>Viáticos/día (COP)</label><input type="number" id="c-viaticos" class="fc" value="0" min="0" step="5000"></div>
+      <div class="fg"><label>Observaciones</label><textarea id="c-obs" class="fc" style="min-height:55px" placeholder="Notas..."></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" onclick="cerrarModal('modal-ciudad')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="guardarCiudad()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODAL – CONFIRMAR ELIMINAR
+════════════════════════════════════════ -->
+<div class="overlay" id="modal-confirm">
+  <div class="modal modal-sm">
+    <div class="modal-hd">
+      <h3>Confirmar eliminación</h3>
+      <button class="close-btn" onclick="cerrarModal('modal-confirm')">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:20px">
+      <div class="alert alert-err">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        ¿Eliminar este viaje? Esta acción no se puede deshacer.
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" onclick="cerrarModal('modal-confirm')">Cancelar</button>
+      <button class="btn btn-danger btn-sm" id="btn-confirm-elim">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  SUPABASE CONFIG
+//  Reemplaza con tu URL y anon key de Supabase
+// ═══════════════════════════════════════════════════════════════
+const SUPABASE_URL  = "https://twcjdfnenaowskibglxt.supabase.co";
+const SUPABASE_KEY  = "sb_publishable_XwDYv9TasEbx_i7Jqm45Qg_YwHrM5oS";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ═══════════════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════════════
+const PASS = "WM2026";
+let adminActivo = false;
+let accionAdmin = null;
+let viajes = [];
+let ciudades = [
+  { nombre:"Bogotá",        hotel:180000, tiquete:300000, viaticos:60000, obs:"Capital. Alta demanda hotelera." },
+  { nombre:"Medellín",      hotel:160000, tiquete:280000, viaticos:55000, obs:"Ciudad de negocios activa." },
+  { nombre:"Cali",          hotel:140000, tiquete:260000, viaticos:50000, obs:"Valle del Cauca." },
+  { nombre:"Barranquilla",  hotel:150000, tiquete:270000, viaticos:55000, obs:"Costa Atlántica." },
+  { nombre:"Cartagena",     hotel:200000, tiquete:290000, viaticos:65000, obs:"Turístico; reservar con anticipación." },
+  { nombre:"Bucaramanga",   hotel:130000, tiquete:240000, viaticos:50000, obs:"Santander. Vuelos frecuentes." },
+  { nombre:"Pereira",       hotel:120000, tiquete:230000, viaticos:45000, obs:"Eje Cafetero." },
+  { nombre:"Manizales",     hotel:110000, tiquete:220000, viaticos:45000, obs:"Eje Cafetero." },
+  { nombre:"Armenia",       hotel:110000, tiquete:215000, viaticos:42000, obs:"Eje Cafetero." },
+  { nombre:"Ibagué",        hotel:110000, tiquete:210000, viaticos:40000, obs:"Tolima." },
+  { nombre:"Villavicencio", hotel:120000, tiquete:220000, viaticos:45000, obs:"Llanos orientales." },
+  { nombre:"Cúcuta",        hotel:120000, tiquete:230000, viaticos:45000, obs:"Frontera Venezuela." },
+  { nombre:"Pasto",         hotel:110000, tiquete:220000, viaticos:40000, obs:"Nariño." },
+  { nombre:"Neiva",         hotel:115000, tiquete:220000, viaticos:42000, obs:"Huila." },
+  { nombre:"Barranquilla",  hotel:150000, tiquete:270000, viaticos:55000, obs:"" },
+  { nombre:"Santa Marta",   hotel:160000, tiquete:260000, viaticos:55000, obs:"Costa Caribe." },
+  { nombre:"Montería",      hotel:120000, tiquete:230000, viaticos:45000, obs:"Córdoba." },
+  { nombre:"San Andrés",    hotel:250000, tiquete:400000, viaticos:70000, obs:"Isla. Vuelo obligatorio." },
+];
+// dedup
+ciudades = ciudades.filter((c,i,a)=>a.findIndex(x=>x.nombre===c.nombre)===i);
+
+const fmt = n => "$" + (Math.round(n)||0).toLocaleString("es-CO");
+const parsN = v => parseFloat(v)||0;
+
+// ═══════════════════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════════════════
+function goTab(id, btn){
+  document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("tab-"+id).classList.add("active");
+  btn.classList.add("active");
+  if(id==="viajes") renderViajes();
+  if(id==="ciudades") renderCiudades();
+  if(id==="informe") renderInforme();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MODALES
+// ═══════════════════════════════════════════════════════════════
+function abrirModal(id){ document.getElementById(id).classList.add("open") }
+function cerrarModal(id){ document.getElementById(id).classList.remove("open") }
+
+// ═══════════════════════════════════════════════════════════════
+//  AUTENTICACIÓN ADMIN
+// ═══════════════════════════════════════════════════════════════
+function abrirLogin(){ abrirModal("modal-pass"); document.getElementById("pass-input").value=""; document.getElementById("pass-error").style.display="none"; setTimeout(()=>document.getElementById("pass-input").focus(),80) }
+function verificarPass(){
+  const v = document.getElementById("pass-input").value;
+  if(v===PASS){
+    cerrarModal("modal-pass");
+    adminActivo=true;
+    const s=document.getElementById("hdr-pass-status");
+    s.className="hdr-pass-status ok";
+    s.innerHTML='<span class="dot"></span><span>Admin activo</span>';
+    document.getElementById("btn-login").textContent="Cerrar sesión";
+    document.getElementById("btn-login").onclick=cerrarSesion;
+    renderCiudades();
+    if(typeof accionAdmin==="function"){ const a=accionAdmin; accionAdmin=null; a(); }
+  } else {
+    document.getElementById("pass-error").style.display="block";
+    document.getElementById("pass-input").value="";
+    document.getElementById("pass-input").focus();
+  }
+}
+function cerrarSesion(){
+  adminActivo=false;
+  const s=document.getElementById("hdr-pass-status");
+  s.className="hdr-pass-status";
+  s.innerHTML='<span class="dot"></span><span>Sin sesión admin</span>';
+  document.getElementById("btn-login").innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Admin';
+  document.getElementById("btn-login").onclick=abrirLogin;
+  renderCiudades();
+}
+function pedirAdminY(fn){
+  if(adminActivo){ fn(); return; }
+  accionAdmin=fn; abrirLogin();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CIUDADES
+// ═══════════════════════════════════════════════════════════════
+function renderCiudades(){
+  const tbody=document.getElementById("tbody-ciudades");
+  // Actualizar header de acción
+  const thAcc=document.getElementById("th-accion-ciudad");
+  if(thAcc) thAcc.textContent=adminActivo?"Acción":"";
+  tbody.innerHTML=ciudades.map((c,i)=>`
+    <tr>
+      <td><strong>${c.nombre}</strong></td>
+      <td class="r">${fmt(c.hotel)}</td>
+      <td class="r">${fmt(c.tiquete)}</td>
+      <td class="r">${fmt(c.viaticos)}</td>
+      <td class="no-print">${adminActivo?`
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-xs" onclick="editarCiudad(${i})">✏️ Editar</button>
+          <button class="btn btn-danger btn-xs" onclick="eliminarCiudad(${i})">🗑️</button>
+        </div>`:''}
+      </td>
+    </tr>`).join("");
+  poblarSelectsCiudad();
+}
+
+function poblarSelectsCiudad(){
+  const opts = ["<option value=''>Selecciona...</option>", ...ciudades.map(c=>`<option value="${c.nombre}">${c.nombre}</option>`)].join("");
+  ["v-origen","v-destino","f-ciudad"].forEach(id=>{
+    const el=document.getElementById(id); if(!el)return;
+    const cur=el.value; el.innerHTML=opts; if(cur)el.value=cur;
+  });
+  document.getElementById("f-ciudad").innerHTML="<option value=''>Todas</option>"+ciudades.map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join("");
+}
+
+function abrirModalCiudad(){
+  document.getElementById("c-idx").value="";
+  ["c-nombre","c-obs"].forEach(id=>document.getElementById(id).value="");
+  ["c-hotel","c-tiquete","c-viaticos"].forEach(id=>document.getElementById(id).value="0");
+  abrirModal("modal-ciudad");
+}
+function editarCiudad(i){
+  const c=ciudades[i];
+  document.getElementById("c-idx").value=i;
+  document.getElementById("c-nombre").value=c.nombre;
+  document.getElementById("c-hotel").value=c.hotel;
+  document.getElementById("c-tiquete").value=c.tiquete;
+  document.getElementById("c-viaticos").value=c.viaticos;
+  document.getElementById("c-obs").value=c.obs||"";
+  abrirModal("modal-ciudad");
+}
+async function guardarCiudad(){
+  const nom=document.getElementById("c-nombre").value.trim();
+  if(!nom){alert("Ingresa el nombre de la ciudad");return}
+  const obj={nombre:nom,hotel:parsN(document.getElementById("c-hotel").value),tiquete:parsN(document.getElementById("c-tiquete").value),viaticos:parsN(document.getElementById("c-viaticos").value),obs:document.getElementById("c-obs").value.trim()};
+  const idx=document.getElementById("c-idx").value;
+  const idExistente = idx!=="" ? ciudades[parseInt(idx)]?.id : null;
+  const ok = await sbGuardarCiudad(obj, idExistente);
+  if(ok) cerrarModal("modal-ciudad");
+}
+async function eliminarCiudad(i){ if(confirm(`¿Eliminar ${ciudades[i].nombre}?`)){ await sbEliminarCiudad(ciudades[i].id); } }
+
+function getCiudad(nombre){ return ciudades.find(c=>c.nombre===nombre)||null }
+
+// ═══════════════════════════════════════════════════════════════
+//  FORMULARIO – CÁLCULOS
+// ═══════════════════════════════════════════════════════════════
+function calcFechas(){
+  const sal=document.getElementById("v-salida").value;
+  const reg=document.getElementById("v-regreso").value;
+  if(!sal||!reg)return;
+  const d1=new Date(sal),d2=new Date(reg);
+  if(d2<d1){showFormAlert("La fecha de regreso no puede ser anterior a la de salida","err");return}
+  const noches=Math.max(0,Math.round((d2-d1)/(1000*60*60*24)));
+  const dias=noches+1;
+  document.getElementById("v-noches").value=noches;
+  document.getElementById("v-dias").value=dias;
+  clearFormAlert();
+  // Recalcular estimados con los nuevos días
+  const c=getCiudad(document.getElementById("v-destino").value);
+  if(c){
+    document.getElementById("v-hotel-est").value=fmt(c.hotel*Math.max(noches,1))+" ("+Math.max(noches,1)+" noche"+(noches!==1?'s':'')+")";
+    document.getElementById("v-viat-est").value=fmt(c.viaticos*dias)+" ("+dias+" día"+(dias!==1?'s':'')+" × "+fmt(c.viaticos)+")";
+  }
+  calcTotales();
+}
+
+function onCiudadChange(){
+  const c=getCiudad(document.getElementById("v-destino").value);
+  if(!c)return;
+  document.getElementById("v-tiq-est").value=fmt(c.tiquete);
+  document.getElementById("v-tarifa-ref").value=fmt(c.viaticos)+"/día";
+  const noches=parsN(document.getElementById("v-noches").value);
+  const dias=parsN(document.getElementById("v-dias").value)||1;
+  document.getElementById("v-hotel-est").value=fmt(c.hotel*Math.max(noches,1))+" ("+Math.max(noches,1)+" noche"+(noches!==1?'s':'')+")" ;
+  document.getElementById("v-viat-est").value=fmt(c.viaticos*dias)+" ("+dias+" día"+(dias!==1?'s':'')+" × "+fmt(c.viaticos)+")";
+  calcTotales();
+}
+
+function onTranspChange(){ calcTotales() }
+
+function calcTotales(){
+  const c=getCiudad(document.getElementById("v-destino").value);
+  const dias=parsN(document.getElementById("v-dias").value)||1;
+  const noches=parsN(document.getElementById("v-noches").value);
+
+  // Estimado — calcular directamente desde ciudad para no depender del campo texto
+  const estTotal=c?(c.tiquete+(c.hotel*Math.max(noches,1))+(c.viaticos*dias)):0;
+  document.getElementById("v-total-est").value=estTotal;
+
+  const tiquete=parsN(document.getElementById("v-tiquete").value);
+  const hotel=parsN(document.getElementById("v-hotel-val").value);
+  const viaticos=parsN(document.getElementById("v-viaticos").value);
+  const otros=parsN(document.getElementById("v-otros").value);
+  const totalReal=tiquete+hotel+viaticos+otros;
+  document.getElementById("v-total-real").value=totalReal;
+
+  // Pagado empresa vs comercial
+  const pgTiq=document.querySelector('input[name="pg-tiquete"]:checked')?.value||"comercial";
+  const pgHot=document.querySelector('input[name="pg-hotel"]:checked')?.value||"comercial";
+  const pgOtr=document.querySelector('input[name="pg-otros"]:checked')?.value||"comercial";
+  const porEmpresa=(pgTiq==="empresa"?tiquete:0)+(pgHot==="empresa"?hotel:0)+(pgOtr==="empresa"?otros:0);
+  const porComercial=(pgTiq==="comercial"?tiquete:0)+(pgHot==="comercial"?hotel:0)+viaticos+(pgOtr==="comercial"?otros:0);
+  document.getElementById("v-pag-empresa").value=porEmpresa;
+  document.getElementById("v-pag-comercial").value=porComercial;
+
+  // Saldo — actualizar también el display de anticipo en sección 5
+  document.getElementById("vr-anticipo-txt").textContent=fmt(porComercial);
+
+  // Alerta presupuesto
+  const ap=document.getElementById("alerta-presupuesto");
+  if(estTotal>0&&totalReal>estTotal) ap.innerHTML=`<div class="alert alert-warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> El gasto real (${fmt(totalReal)}) supera el presupuesto estimado para la ciudad (${fmt(estTotal)}). Diferencia: ${fmt(totalReal-estTotal)}.</div>`;
+  else ap.innerHTML="";
+
+  calcSaldoFinal();
+}
+
+function calcSaldoFinal(){
+  const pgTiq=document.querySelector('input[name="pg-tiquete"]:checked')?.value||"comercial";
+  const pgHot=document.querySelector('input[name="pg-hotel"]:checked')?.value||"comercial";
+  const pgOtr=document.querySelector('input[name="pg-otros"]:checked')?.value||"comercial";
+  const tiquete=parsN(document.getElementById("v-tiquete").value);
+  const hotel=parsN(document.getElementById("v-hotel-val").value);
+  const viaticos=parsN(document.getElementById("v-viaticos").value);
+  const otros=parsN(document.getElementById("v-otros").value);
+  const porComercial=(pgTiq==="comercial"?tiquete:0)+(pgHot==="comercial"?hotel:0)+viaticos+(pgOtr==="comercial"?otros:0);
+
+  const grTiq=parsN(document.getElementById("vr-tiquete").value);
+  const grHot=parsN(document.getElementById("vr-hotel").value);
+  const grViat=parsN(document.getElementById("vr-viaticos").value);
+  const grOtr=parsN(document.getElementById("vr-otros").value);
+  const gastoRealTotal=grTiq+grHot+grViat+grOtr;
+
+  document.getElementById("vr-total-txt").textContent=fmt(gastoRealTotal);
+  document.getElementById("vr-anticipo-txt").textContent=fmt(porComercial);
+
+  if(gastoRealTotal===0){ document.getElementById("saldo-display").innerHTML=""; return; }
+
+  const saldoFinal=porComercial-gastoRealTotal;
+  const sd=document.getElementById("saldo-display");
+  if(saldoFinal>0) sd.innerHTML=`<div class="saldo-box saldo-dev"><div class="saldo-title">✅ Saldo a devolver a la empresa</div><div class="saldo-val">${fmt(saldoFinal)}</div><div style="font-size:11px;margin-top:3px">Anticipo ${fmt(porComercial)} − Gasto real ${fmt(gastoRealTotal)}</div></div>`;
+  else if(saldoFinal<0) sd.innerHTML=`<div class="saldo-box saldo-favor"><div class="saldo-title">⚠️ Saldo a favor del comercial</div><div class="saldo-val">${fmt(Math.abs(saldoFinal))}</div><div style="font-size:11px;margin-top:3px">Gasto real ${fmt(gastoRealTotal)} superó el anticipo ${fmt(porComercial)}</div></div>`;
+  else sd.innerHTML=`<div class="saldo-box saldo-cero"><div class="saldo-title">✅ Saldo en cero — sin diferencia</div><div class="saldo-val">$0</div></div>`;
+}
+
+function calcSaldoViaje(v){
+  const pgTiq=v.pgTiquete||"comercial",pgHot=v.pgHotel||"comercial",pgOtr=v.pgOtros||"comercial";
+  const porComercial=(pgTiq==="comercial"?v.tiquete:0)+(pgHot==="comercial"?v.hotelVal:0)+v.viaticos+(pgOtr==="comercial"?v.otros:0);
+  const gastoComercial=(pgTiq==="comercial"?v.tiquete:0)+(pgHot==="comercial"?v.hotelVal:0)+v.viaticos+(pgOtr==="comercial"?v.otros:0);
+  return porComercial-gastoComercial; // always 0 in this simple model; real saldo uses anticipo field
+}
+function calcSaldoFinalViaje(v){
+  // anticipo entregado al comercial vs gasto real del comercial
+  const pgTiq=v.pgTiquete||"comercial",pgHot=v.pgHotel||"comercial",pgOtr=v.pgOtros||"comercial";
+  const entregado=v.anticipoComercial||((pgTiq==="comercial"?v.tiquete:0)+(pgHot==="comercial"?v.hotelVal:0)+v.viaticos+(pgOtr==="comercial"?v.otros:0));
+  const gastoReal=v.gastoRealComercial!==undefined?v.gastoRealComercial:((pgTiq==="comercial"?v.tiquete:0)+(pgHot==="comercial"?v.hotelVal:0)+v.viaticos+(pgOtr==="comercial"?v.otros:0));
+  return entregado-gastoReal;
+}
+function estadoViaje(v){
+  const s4=document.getElementById; // placeholder
+  const sop=v.soportes||{};
+  const faltaSop=!sop.tiquete||!sop.hotel||!sop.viaticos;
+  const saldo=calcSaldoFinalViaje(v);
+  if(v.cerrado) return "cerrado";
+  if(faltaSop) return "pendiente";
+  if(saldo>0) return "devolver";
+  if(saldo<0) return "favor";
+  return "cerrado";
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ADJUNTOS DE SOPORTES
+// ═══════════════════════════════════════════════════════════════
+// Almacén temporal mientras se edita el formulario
+let adjuntosTemp = { tiquete: null, hotel: null, viaticos: null, otros: null };
+
+function adjuntarSoporte(tipo, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const maxMB = 5;
+  if (file.size > maxMB * 1024 * 1024) {
+    alert(`El archivo supera ${maxMB}MB. Usa una imagen más pequeña.`);
+    input.value = ""; return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = { nombre: file.name, tipo: file.type, base64: e.target.result };
+    adjuntosTemp[tipo] = data;
+    // marcar checkbox automáticamente
+    document.getElementById("s-"+tipo).checked = true;
+    renderPrevAdjunto(tipo, data);
+  };
+  reader.readAsDataURL(file);
+}
+
+function borrarSoporte(tipo) {
+  adjuntosTemp[tipo] = null;
+  document.getElementById("s-"+tipo).checked = false;
+  renderPrevAdjunto(tipo, null);
+}
+
+function renderPrevAdjunto(tipo, data) {
+  const prev = document.getElementById("prev-"+tipo);
+  const btnDel = document.getElementById("btn-del-"+tipo);
+  if (!data) {
+    prev.innerHTML = '<span style="color:var(--gray3)">Sin archivo adjunto</span>';
+    if (btnDel) btnDel.style.display = "none";
+    return;
+  }
+  if (btnDel) btnDel.style.display = "";
+  const esImagen = data.tipo.startsWith("image/");
+  const esPDF   = data.tipo === "application/pdf";
+  prev.innerHTML = `<div class="adjunto-prev">
+    ${esImagen ? `<img src="${data.base64}" alt="${data.nombre}">` :
+      `<div style="width:50px;height:50px;background:var(--red-pl);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:22px">📄</div>`}
+    <div>
+      <div class="adjunto-nombre">${data.nombre}</div>
+      <div class="adjunto-tipo">${esPDF ? "Documento PDF" : data.tipo}</div>
+      <div style="color:var(--g-dk);font-size:11px;margin-top:3px">✅ Adjunto listo</div>
+    </div>
+  </div>`;
+}
+
+function cargarAdjuntosEnForm(adjuntos) {
+  const tipos = ["tiquete","hotel","viaticos","otros"];
+  tipos.forEach(t => {
+    adjuntosTemp[t] = adjuntos?.[t] || null;
+    renderPrevAdjunto(t, adjuntosTemp[t]);
+  });
+}
+
+function limpiarAdjuntosForm() {
+  adjuntosTemp = { tiquete: null, hotel: null, viaticos: null, otros: null };
+  ["tiquete","hotel","viaticos","otros"].forEach(t => renderPrevAdjunto(t, null));
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GUARDAR / EDITAR VIAJE
+// ═══════════════════════════════════════════════════════════════
+async function guardarViaje(){
+  // Validaciones
+  const campos=[
+    ["v-comercial","Nombre del comercial"],
+    ["v-destino","Ciudad de destino"],
+    ["v-salida","Fecha de salida"],
+    ["v-regreso","Fecha de regreso"],
+    ["v-motivo","Motivo del viaje"],
+  ];
+  for(const [id,lbl] of campos){
+    if(!document.getElementById(id).value.trim()){
+      showFormAlert("Campo requerido: "+lbl,"err"); document.getElementById(id).focus(); return;
+    }
+  }
+  const sal=new Date(document.getElementById("v-salida").value);
+  const reg=new Date(document.getElementById("v-regreso").value);
+  if(reg<sal){showFormAlert("La fecha de regreso no puede ser anterior a la de salida","err");return}
+
+  const pgTiq=document.querySelector('input[name="pg-tiquete"]:checked')?.value||"comercial";
+  const pgHot=document.querySelector('input[name="pg-hotel"]:checked')?.value||"comercial";
+  const pgOtr=document.querySelector('input[name="pg-otros"]:checked')?.value||"comercial";
+  const transp=document.querySelector('input[name="transporte"]:checked')?.value||"";
+
+  const tiquete=parsN(document.getElementById("v-tiquete").value);
+  const hotelVal=parsN(document.getElementById("v-hotel-val").value);
+  const viaticos=parsN(document.getElementById("v-viaticos").value);
+  const otros=parsN(document.getElementById("v-otros").value);
+  const entregadoComercial=(pgTiq==="comercial"?tiquete:0)+(pgHot==="comercial"?hotelVal:0)+viaticos+(pgOtr==="comercial"?otros:0);
+  const c=getCiudad(document.getElementById("v-destino").value);
+  const dias=parsN(document.getElementById("v-dias").value)||1;
+  const noches=parsN(document.getElementById("v-noches").value);
+
+  const obj={
+    id: Date.now(),
+    comercial: document.getElementById("v-comercial").value.trim(),
+    origen: document.getElementById("v-origen").value,
+    destino: document.getElementById("v-destino").value,
+    salida: document.getElementById("v-salida").value,
+    regreso: document.getElementById("v-regreso").value,
+    noches, dias,
+    transporte: transp,
+    aerolinea: document.getElementById("v-aerolinea").value,
+    hotel: document.getElementById("v-hotel").value.trim(),
+    motivo: document.getElementById("v-motivo").value.trim(),
+    cliente: document.getElementById("v-cliente").value.trim(),
+    obs: document.getElementById("v-obs").value.trim(),
+    tiquete, hotelVal, viaticos, otros,
+    otrosDesc: document.getElementById("v-otros-desc").value.trim(),
+    pgTiquete: pgTiq, pgHotel: pgHot, pgOtros: pgOtr,
+    totalEst: c?(c.tiquete+(c.hotel*Math.max(noches,1))+(c.viaticos*dias)):0,
+    totalReal: tiquete+hotelVal+viaticos+otros,
+    porEmpresa: (pgTiq==="empresa"?tiquete:0)+(pgHot==="empresa"?hotelVal:0)+(pgOtr==="empresa"?otros:0),
+    anticipoComercial: entregadoComercial,
+    gastoRealComercial: parsN(document.getElementById("vr-tiquete").value)+parsN(document.getElementById("vr-hotel").value)+parsN(document.getElementById("vr-viaticos").value)+parsN(document.getElementById("vr-otros").value),
+    gastoRealDetalle:{
+      tiquete: parsN(document.getElementById("vr-tiquete").value),
+      hotel:   parsN(document.getElementById("vr-hotel").value),
+      viaticos:parsN(document.getElementById("vr-viaticos").value),
+      otros:   parsN(document.getElementById("vr-otros").value),
+    },
+    soportes:{
+      tiquete: document.getElementById("s-tiquete").checked,
+      hotel:   document.getElementById("s-hotel").checked,
+      viaticos:document.getElementById("s-viaticos").checked,
+      otros:   document.getElementById("s-otros").checked,
+    },
+    obsSoportes: document.getElementById("v-obs-soportes").value.trim(),
+    adjuntos: { ...adjuntosTemp },
+    cerrado: false,
+  };
+
+  // Save to Supabase
+  const eid = document.getElementById("edit-id").value;
+  const saved = await sbGuardarViaje(obj, eid ? parseInt(eid) : null);
+  if(!saved) return;
+  await sbCargarViajes();
+  limpiarForm();
+  goTab("viajes",document.querySelectorAll(".tab-btn")[0]);
+  showFormAlert("Viaje guardado correctamente","ok");
+}
+
+function limpiarForm(){
+  document.getElementById("edit-id").value="";
+  document.getElementById("form-estado-txt").textContent="";
+  ["v-comercial","v-hotel","v-motivo","v-cliente","v-obs","v-otros-desc","v-obs-soportes"].forEach(id=>document.getElementById(id).value="");
+  ["v-origen","v-destino","v-aerolinea"].forEach(id=>document.getElementById(id).value="");
+  ["v-salida","v-regreso"].forEach(id=>document.getElementById(id).value="");
+  ["v-noches","v-dias","v-total-est","v-total-real","v-pag-empresa","v-pag-comercial","v-viat-est"].forEach(id=>document.getElementById(id).value="");
+  ["v-tiq-est","v-hotel-est","v-tarifa-ref"].forEach(id=>document.getElementById(id).value="");
+  ["v-tiquete","v-hotel-val","v-viaticos","v-otros","vr-tiquete","vr-hotel","vr-viaticos","vr-otros"].forEach(id=>document.getElementById(id).value="0");
+  document.getElementById("vr-total-txt").textContent="$0";
+  document.getElementById("vr-anticipo-txt").textContent="$0";
+  ["s-tiquete","s-hotel","s-viaticos","s-otros"].forEach(id=>document.getElementById(id).checked=false);
+  document.querySelectorAll('input[name="pg-tiquete"]')[1]?.click();
+  document.querySelectorAll('input[name="pg-hotel"]')[1]?.click();
+  document.querySelectorAll('input[name="pg-otros"]')[1]?.click();
+  document.getElementById("saldo-display").innerHTML="";
+  document.getElementById("alerta-presupuesto").innerHTML="";
+  document.getElementById("form-alert").style.display="none";
+  limpiarAdjuntosForm();
+}
+
+function showFormAlert(msg,tipo){
+  const el=document.getElementById("form-alert");
+  const icons={err:'<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',ok:'<polyline points="20 6 9 17 4 12"/>'};
+  const cls={err:"alert-err",ok:"alert-ok",warn:"alert-warn"};
+  el.className="alert "+(cls[tipo]||"alert-info");
+  el.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons[tipo]||""}</svg>${msg}`;
+  el.style.display="flex";
+  el.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function clearFormAlert(){ document.getElementById("form-alert").style.display="none" }
+
+// ═══════════════════════════════════════════════════════════════
+//  RENDER VIAJES
+// ═══════════════════════════════════════════════════════════════
+const estadoBadge={pendiente:'<span class="badge badge-pend">⏳ Pend. soportes</span>',devolver:'<span class="badge badge-dev">✅ A devolver</span>',favor:'<span class="badge badge-favor">⚠️ A favor comerc.</span>',cerrado:'<span class="badge badge-cerr">🔒 Cerrado</span>'};
+
+function renderViajes(){
+  const fCom=document.getElementById("f-comercial").value.toLowerCase();
+  const fCiu=document.getElementById("f-ciudad").value;
+  const fEst=document.getElementById("f-estado").value;
+  const filtrado=viajes.filter(v=>
+    (!fCom||v.comercial.toLowerCase().includes(fCom))&&
+    (!fCiu||v.destino===fCiu)&&
+    (!fEst||estadoViaje(v)===fEst)
+  );
+  document.getElementById("reg-count").textContent=`(${filtrado.length} de ${viajes.length})`;
+  const tbody=document.getElementById("tbody-viajes");
+  if(!filtrado.length){
+    tbody.innerHTML=`<tr><td colspan="11"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>${viajes.length?"Sin resultados con estos filtros.":"No hay viajes registrados aún."}</p></div></td></tr>`;
+    renderKPIsViajes(filtrado); return;
+  }
+  tbody.innerHTML=filtrado.map((v,i)=>{
+    const saldo=calcSaldoFinalViaje(v);
+    const saldoStr=saldo>0?`<span style="color:var(--g-dk);font-weight:700">+${fmt(saldo)}</span>`:saldo<0?`<span style="color:var(--red);font-weight:700">${fmt(saldo)}</span>`:`<span style="color:var(--gray2)">$0</span>`;
+    return`<tr>
+      <td style="color:var(--gray2);font-weight:700">${viajes.indexOf(v)+1}</td>
+      <td><strong>${v.comercial}</strong><div class="mini-desglose"><span>${v.motivo||"–"}</span></div></td>
+      <td><strong>${v.destino}</strong><div class="mini-desglose"><span>${v.origen||""}</span></div></td>
+      <td style="white-space:nowrap;font-size:11px">${v.salida} <span style="color:var(--gray3)">→</span> ${v.regreso}<div class="mini-desglose"><span>${v.dias} día${v.dias!==1?"s":""}</span></div></td>
+      <td style="font-size:11px">${v.hotel||"—"}<div class="mini-desglose"><span>${v.aerolinea||""}</span></div></td>
+      <td class="r">${fmt(v.totalEst)}</td>
+      <td class="r" style="font-weight:600">${fmt(v.totalReal)}</td>
+      <td class="r" style="color:var(--amber);font-weight:600">${fmt(v.anticipoComercial)}</td>
+      <td class="r">${saldoStr}</td>
+      <td>${estadoBadge[estadoViaje(v)]||""}</td>
+      <td class="no-print">
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-xs" onclick="verDetalle(${v.id})" title="Ver informe">📋</button>
+          <button class="btn btn-ghost btn-xs" onclick="editarViaje(${v.id})" title="Editar">✏️</button>
+          ${!v.cerrado
+            ? `<button class="btn btn-xs" onclick="liquidarViaje(${v.id})" title="Marcar como liquidado" style="background:#1a56db;color:white;border:none;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font-h);letter-spacing:.3px">✔ Liquidar</button>`
+            : `<button class="btn btn-xs" onclick="reabrirViaje(${v.id})" title="Reabrir viaje" style="background:var(--gray4);color:var(--gray1);border:none;border-radius:4px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font-h)">↩ Reabrir</button>`
+          }
+          <button class="btn btn-danger btn-xs" onclick="pedirEliminar(${v.id})" title="Eliminar">🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+  renderKPIsViajes(filtrado);
+}
+
+function renderKPIsViajes(data){
+  const totalEnt=data.reduce((s,v)=>s+v.anticipoComercial,0);
+  const totalReal=data.reduce((s,v)=>s+v.totalReal,0);
+  let aFavor=0,aDevolver=0;
+  data.forEach(v=>{const s=calcSaldoFinalViaje(v);if(s>0)aDevolver+=s;else aFavor+=Math.abs(s)});
+  document.getElementById("kpis-viajes").innerHTML=`
+    <div class="kpi b"><div class="kpi-lbl">Viajes</div><div class="kpi-val">${data.length}</div><div class="kpi-sub">registrados</div></div>
+    <div class="kpi a"><div class="kpi-lbl">Entregado a comerciales</div><div class="kpi-val">${fmt(totalEnt)}</div><div class="kpi-sub">anticipo total</div></div>
+    <div class="kpi"><div class="kpi-lbl">Gasto real total</div><div class="kpi-val">${fmt(totalReal)}</div><div class="kpi-sub">suma de viajes</div></div>
+    <div class="kpi g"><div class="kpi-lbl">A devolver a empresa</div><div class="kpi-val">${fmt(aDevolver)}</div><div class="kpi-sub">comerciales con saldo +</div></div>
+    <div class="kpi r"><div class="kpi-lbl">A favor de comerciales</div><div class="kpi-val">${fmt(aFavor)}</div><div class="kpi-sub">empresa debe reembolsar</div></div>`;
+}
+
+function limpiarFiltros(){
+  document.getElementById("f-comercial").value="";
+  document.getElementById("f-ciudad").value="";
+  document.getElementById("f-estado").value="";
+  renderViajes();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  EDITAR / ELIMINAR
+// ═══════════════════════════════════════════════════════════════
+function editarViaje(id){
+  const v=viajes.find(x=>x.id===id); if(!v)return;
+  limpiarForm();
+  document.getElementById("edit-id").value=v.id;
+  document.getElementById("v-comercial").value=v.comercial;
+  document.getElementById("v-origen").value=v.origen||"";
+  document.getElementById("v-destino").value=v.destino;
+  document.getElementById("v-salida").value=v.salida;
+  document.getElementById("v-regreso").value=v.regreso;
+  document.getElementById("v-noches").value=v.noches;
+  document.getElementById("v-dias").value=v.dias;
+  document.getElementById("v-motivo").value=v.motivo||"";
+  document.getElementById("v-cliente").value=v.cliente||"";
+  document.getElementById("v-obs").value=v.obs||"";
+  document.getElementById("v-aerolinea").value=v.aerolinea||"";
+  document.getElementById("v-hotel").value=v.hotel||"";
+  document.getElementById("v-tiquete").value=v.tiquete;
+  document.getElementById("v-hotel-val").value=v.hotelVal;
+  document.getElementById("v-viaticos").value=v.viaticos;
+  document.getElementById("v-otros").value=v.otros;
+  document.getElementById("v-otros-desc").value=v.otrosDesc||"";
+  document.getElementById("v-obs-soportes").value=v.obsSoportes||"";
+  document.getElementById("s-tiquete").checked=v.soportes?.tiquete||false;
+  document.getElementById("s-hotel").checked=v.soportes?.hotel||false;
+  document.getElementById("s-viaticos").checked=v.soportes?.viaticos||false;
+  document.getElementById("s-otros").checked=v.soportes?.otros||false;
+  document.querySelectorAll(`input[name="pg-tiquete"][value="${v.pgTiquete||'comercial'}"]`)[0]?.click();
+  document.querySelectorAll(`input[name="pg-hotel"][value="${v.pgHotel||'comercial'}"]`)[0]?.click();
+  document.querySelectorAll(`input[name="pg-otros"][value="${v.pgOtros||'comercial'}"]`)[0]?.click();
+  document.getElementById("vr-tiquete").value=v.gastoRealDetalle?.tiquete||0;
+  document.getElementById("vr-hotel").value=v.gastoRealDetalle?.hotel||0;
+  document.getElementById("vr-viaticos").value=v.gastoRealDetalle?.viaticos||0;
+  document.getElementById("vr-otros").value=v.gastoRealDetalle?.otros||0;
+  cargarAdjuntosEnForm(v.adjuntos||{});
+  if(v.transporte) document.querySelector(`input[name="transporte"][value="${v.transporte}"]`)?.click();
+  document.getElementById("form-estado-txt").textContent="Editando viaje existente";
+  onCiudadChange(); calcTotales();
+  goTab("nuevo",document.querySelectorAll(".tab-btn")[1]);
+  window.scrollTo(0,0);
+}
+
+let idEliminar=-1;
+function pedirEliminar(id){
+  idEliminar=id;
+  abrirModal("modal-confirm");
+  document.getElementById("btn-confirm-elim").onclick=async ()=>{
+    const ok = await sbEliminarViaje(idEliminar);
+    if(ok){ viajes=viajes.filter(x=>x.id!==idEliminar); cerrarModal("modal-confirm"); renderViajes(); }
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DETALLE / INFORME VIAJE
+// ═══════════════════════════════════════════════════════════════
+function verDetalle(id){
+  const v=viajes.find(x=>x.id===id); if(!v)return;
+  const saldo=calcSaldoFinalViaje(v);
+  const est=estadoViaje(v);
+  const saldoHTML=saldo>0
+    ?`<div class="saldo-box saldo-dev" style="margin-top:6px"><div class="saldo-title">✅ Saldo a devolver a la empresa</div><div class="saldo-val">${fmt(saldo)}</div></div>`
+    :saldo<0
+    ?`<div class="saldo-box saldo-favor" style="margin-top:6px"><div class="saldo-title">⚠️ Saldo a favor del comercial</div><div class="saldo-val">${fmt(Math.abs(saldo))}</div></div>`
+    :`<div class="saldo-box saldo-cero" style="margin-top:6px"><div class="saldo-title">Saldo en cero</div><div class="saldo-val">$0</div></div>`;
+
+  const r=(l,val)=>`<div class="informe-row"><span class="lbl">${l}</span><span class="val">${val}</span></div>`;
+  const si='<span style="color:var(--g-dk);font-weight:700">✅ Sí</span>';
+  const no='<span style="color:var(--red)">❌ No</span>';
+
+  document.getElementById("modal-detalle-body").innerHTML=`
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid var(--g-cl)">
+      <div>
+        <div style="font-family:var(--font-h);font-size:22px;font-weight:700">${v.comercial}</div>
+        <div style="font-size:12px;color:var(--gray2)">${v.motivo||""} — ${v.cliente||""}</div>
+      </div>
+      <div style="margin-left:auto">${estadoBadge[est]||""}</div>
+    </div>
+
+    <div class="grid-2" style="gap:18px">
+      <div>
+        <div class="informe-section">
+          <h4>📋 Datos generales</h4>
+          ${r("Comercial",v.comercial)}
+          ${r("Origen",v.origen||"—")}
+          ${r("Destino",v.destino)}
+          ${r("Salida",v.salida)}
+          ${r("Regreso",v.regreso)}
+          ${r("Noches",v.noches)}
+          ${r("Días de viáticos",v.dias)}
+          ${r("Motivo",v.motivo||"—")}
+          ${r("Cliente / Zona",v.cliente||"—")}
+          ${r("Observaciones",v.obs||"—")}
+        </div>
+        <div class="informe-section">
+          <h4>✈️ Transporte y alojamiento</h4>
+          ${r("Medio de transporte",v.transporte||"—")}
+          ${r("Aerolínea / Transportadora",v.aerolinea||"—")}
+          ${r("Hotel",v.hotel||"—")}
+        </div>
+      </div>
+      <div>
+        <div class="informe-section">
+          <h4>💰 Valores estimados (referencia ciudad)</h4>
+          ${r("Total estimado viaje",fmt(v.totalEst))}
+        </div>
+        <div class="informe-section">
+          <h4>💵 Valores reales</h4>
+          ${r("Tiquete real",fmt(v.tiquete)+` (${v.pgTiquete==="empresa"?"pagado empresa":"entregado comercial"})`)}
+          ${r("Hotel real",fmt(v.hotelVal)+` (${v.pgHotel==="empresa"?"pagado empresa":"entregado comercial"})`)}
+          ${r("Viáticos entregados",fmt(v.viaticos)+" (entregado comercial)")}
+          ${r("Otros gastos",fmt(v.otros)+(v.otrosDesc?" – "+v.otrosDesc:"")+` (${v.pgOtros==="empresa"?"pagado empresa":"entregado comercial"})`)}
+          <div class="informe-total"><span class="lbl">TOTAL REAL</span><span class="val">${fmt(v.totalReal)}</span></div>
+        </div>
+        <div class="informe-section">
+          <h4>🏦 Pagos y saldo final</h4>
+          ${r("Pagado directamente por empresa",fmt(v.porEmpresa))}
+          ${r("Anticipo entregado al comercial",fmt(v.anticipoComercial))}
+          <div style="background:var(--amb-pl);border-radius:var(--r);padding:10px 12px;margin:6px 0;font-size:12px">
+            <div style="font-weight:700;color:var(--amber);margin-bottom:5px">Gasto real declarado por el comercial</div>
+            ${v.gastoRealDetalle?.tiquete?r("  ✈️ Tiquete",fmt(v.gastoRealDetalle.tiquete)):""}
+            ${v.gastoRealDetalle?.hotel?r("  🏨 Hotel",fmt(v.gastoRealDetalle.hotel)):""}
+            ${v.gastoRealDetalle?.viaticos?r("  🍽️ Viáticos",fmt(v.gastoRealDetalle.viaticos)):""}
+            ${v.gastoRealDetalle?.otros?r("  📋 Otros",fmt(v.gastoRealDetalle.otros)):""}
+            <div class="informe-total"><span class="lbl">TOTAL GASTO REAL</span><span class="val">${fmt(v.gastoRealComercial||0)}</span></div>
+          </div>
+          ${saldoHTML}
+        </div>
+        <div class="informe-section">
+          <h4>📎 Soportes</h4>
+          ${r("Soporte tiquete",v.soportes?.tiquete?si:no)}
+          ${r("Soporte hotel",v.soportes?.hotel?si:no)}
+          ${r("Soporte viáticos",v.soportes?.viaticos?si:no)}
+          ${r("Soporte otros gastos",v.soportes?.otros?si:no)}
+          ${v.obsSoportes?r("Observaciones soportes",v.obsSoportes):""}
+        </div>
+
+        <!-- Lista de adjuntos en pantalla (inline, se oculta al imprimir) -->
+        <div class="adjuntos-inline informe-section">
+          <h4>🖼️ Documentos adjuntos</h4>
+          ${(()=>{
+            const adj = v.adjuntos || {};
+            const items = [
+              { key:"tiquete",  label:"✈️ Tiquete"      },
+              { key:"hotel",    label:"🏨 Hotel"         },
+              { key:"viaticos", label:"🍽️ Viáticos"     },
+              { key:"otros",    label:"📋 Otros gastos" },
+            ];
+            const found = items.filter(i => adj[i.key]);
+            if(!found.length) return '<div style="font-size:12px;color:var(--gray3);font-style:italic">Sin documentos adjuntos.</div>';
+            return found.map(i => {
+              const d = adj[i.key];
+              const esImg = d.tipo?.startsWith("image/");
+              const esPDF = d.tipo === "application/pdf";
+              const uid = 'adj_' + i.key + '_' + Date.now();
+              return `<div style="margin-bottom:10px;border:1px solid var(--gray4);border-radius:6px;overflow:hidden">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--gray5)">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font-size:18px">${esImg ? '🖼️' : '📄'}</span>
+                    <div>
+                      <div style="font-size:11px;font-weight:700;color:var(--g-dk);letter-spacing:.4px;text-transform:uppercase">${i.label}</div>
+                      <div style="font-size:11px;color:var(--gray2);margin-top:1px">${d.nombre}</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:6px">
+                    ${esImg ? `<button onclick="togglePrevImg('${uid}')" style="background:var(--gray4);color:var(--gray1);border:none;border-radius:4px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font-h)">👁 Ver</button>` : ''}
+                    <button onclick="abrirAdjunto('${uid}')" style="background:var(--g);color:white;border:none;border-radius:4px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font-h);letter-spacing:.3px">↗ Abrir</button>
+                  </div>
+                </div>
+                ${esImg ? `<div id="${uid}" style="display:none;padding:8px;background:#fff;border-top:1px solid var(--gray4)"><img src="${d.base64}" alt="${d.nombre}" style="max-width:100%;max-height:300px;display:block;margin:0 auto;object-fit:contain"></div>` : `<span id="${uid}" data-src="${d.base64}" style="display:none"></span>`}
+              </div>`;
+            }).join("");
+          })()}
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ADJUNTOS: una página por soporte (solo visible al imprimir) ══ -->
+    ${(()=>{
+      const adj = v.adjuntos || {};
+      const items = [
+        { key:"tiquete",  label:"✈️ Soporte de Tiquete"      },
+        { key:"hotel",    label:"🏨 Soporte de Hotel"         },
+        { key:"viaticos", label:"🍽️ Soporte de Viáticos"     },
+        { key:"otros",    label:"📋 Soporte de Otros Gastos"  },
+      ];
+      const found = items.filter(i => adj[i.key]);
+      if(!found.length) return '';
+      return `<div class="adjuntos-print-section">` +
+        found.map(i => {
+          const d = adj[i.key];
+          const esImg = d.tipo?.startsWith("image/");
+          return `<div class="adjunto-pagina">
+            <!-- Cabecera de página del soporte -->
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;padding-bottom:12px;border-bottom:2px solid #8DC63F">
+              <div>
+                <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:#1E1E1E">${i.label}</div>
+                <div style="font-size:11px;color:#787878;margin-top:2px">${v.comercial} · ${v.destino} · ${v.salida} → ${v.regreso}</div>
+              </div>
+              <div style="font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;color:#6A9A28;background:#EDF6DA;border:1px solid #C5E495;padding:3px 10px;border-radius:20px">WORLD MACHINERY</div>
+            </div>
+            <div style="font-size:11px;color:#787878;margin-bottom:12px">
+              <strong>Archivo:</strong> ${d.nombre}
+            </div>
+            ${esImg
+              ? `<img src="${d.base64}" alt="${d.nombre}">`
+              : `<iframe src="${d.base64}" style="width:100%;height:700px;border:none;display:block" title="${d.nombre}"></iframe>`
+            }
+          </div>`;
+        }).join("") +
+      `</div>`;
+    })()}`;
+
+  abrirModal("modal-detalle");
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INFORME GLOBAL
+// ═══════════════════════════════════════════════════════════════
+function renderInforme(){
+  document.getElementById("inf-count-pill").textContent=`${viajes.length} viaje${viajes.length!==1?"s":""}`;
+  const totalEnt=viajes.reduce((s,v)=>s+v.anticipoComercial,0);
+  const totalReal=viajes.reduce((s,v)=>s+v.totalReal,0);
+  const totalEst=viajes.reduce((s,v)=>s+v.totalEst,0);
+  let aFavor=0,aDevolver=0;
+  viajes.forEach(v=>{const s=calcSaldoFinalViaje(v);if(s>0)aDevolver+=s;else aFavor+=Math.abs(s)});
+  document.getElementById("kpis-informe").innerHTML=`
+    <div class="kpi b"><div class="kpi-lbl">Total viajes</div><div class="kpi-val">${viajes.length}</div></div>
+    <div class="kpi a"><div class="kpi-lbl">Total anticipos</div><div class="kpi-val">${fmt(totalEnt)}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Gasto real total</div><div class="kpi-val">${fmt(totalReal)}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Estimado total</div><div class="kpi-val">${fmt(totalEst)}</div></div>
+    <div class="kpi g"><div class="kpi-lbl">A devolver empresa</div><div class="kpi-val">${fmt(aDevolver)}</div></div>
+    <div class="kpi r"><div class="kpi-lbl">A favor comerciales</div><div class="kpi-val">${fmt(aFavor)}</div></div>`;
+
+  // Por comercial
+  const mc={};
+  viajes.forEach(v=>{
+    if(!mc[v.comercial])mc[v.comercial]={viajes:0,ent:0,real:0,saldo:0};
+    mc[v.comercial].viajes++;mc[v.comercial].ent+=v.anticipoComercial;mc[v.comercial].real+=v.totalReal;
+    mc[v.comercial].saldo+=calcSaldoFinalViaje(v);
+  });
+  document.getElementById("inf-tbl-comercial").innerHTML=Object.entries(mc).sort((a,b)=>b[1].ent-a[1].ent).map(([k,v])=>`<tr><td><strong>${k}</strong></td><td class="c">${v.viajes}</td><td class="r">${fmt(v.ent)}</td><td class="r">${fmt(v.real)}</td><td class="r ${v.saldo>0?"":""}"><span style="color:${v.saldo>0?"var(--g-dk)":v.saldo<0?"var(--red)":"var(--gray2)"};font-weight:700">${v.saldo>0?"+":""}${fmt(v.saldo)}</span></td></tr>`).join("")||'<tr><td colspan="5" style="text-align:center;color:var(--gray2);padding:14px">Sin datos</td></tr>';
+
+  // Por ciudad
+  const mcid={};
+  viajes.forEach(v=>{if(!mcid[v.destino])mcid[v.destino]={viajes:0,real:0};mcid[v.destino].viajes++;mcid[v.destino].real+=v.totalReal});
+  document.getElementById("inf-tbl-ciudad").innerHTML=Object.entries(mcid).sort((a,b)=>b[1].real-a[1].real).map(([k,v])=>`<tr><td><strong>${k}</strong></td><td class="c">${v.viajes}</td><td class="r">${fmt(v.real)}</td><td class="r">${fmt(v.real/v.viajes)}</td></tr>`).join("")||'<tr><td colspan="4" style="text-align:center;color:var(--gray2);padding:14px">Sin datos</td></tr>';
+
+  // Por aerolínea
+  const maer={};
+  viajes.forEach(v=>{const k=v.aerolinea||"Sin registrar";if(!maer[k])maer[k]={viajes:0,total:0};maer[k].viajes++;maer[k].total+=v.tiquete});
+  document.getElementById("inf-tbl-aero").innerHTML=Object.entries(maer).sort((a,b)=>b[1].total-a[1].total).map(([k,v])=>`<tr><td><strong>${k}</strong></td><td class="c">${v.viajes}</td><td class="r">${fmt(v.total)}</td></tr>`).join("")||'<tr><td colspan="3" style="text-align:center;color:var(--gray2);padding:14px">Sin datos</td></tr>';
+
+  // Por hotel
+  const mhot={};
+  viajes.forEach(v=>{const k=(v.hotel||"Sin registrar")+"|"+v.destino;if(!mhot[k])mhot[k]={nombre:v.hotel||"Sin registrar",ciudad:v.destino,est:0,total:0};mhot[k].est++;mhot[k].total+=v.hotelVal});
+  document.getElementById("inf-tbl-hotel").innerHTML=Object.values(mhot).sort((a,b)=>b.total-a.total).map(v=>`<tr><td><strong>${v.nombre}</strong></td><td>${v.ciudad}</td><td class="c">${v.est}</td><td class="r">${fmt(v.total)}</td></tr>`).join("")||'<tr><td colspan="4" style="text-align:center;color:var(--gray2);padding:14px">Sin datos</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  EXPORTAR CSV
+// ═══════════════════════════════════════════════════════════════
+function exportarCSVGlobal(){
+  if(!viajes.length){alert("Sin viajes para exportar");return}
+  const heads=["#","Comercial","Origen","Destino","Salida","Regreso","Días","Transporte","Aerolínea","Hotel","Motivo","Cliente","Total estimado","Tiquete","Hotel val","Viáticos","Otros","Total real","Por empresa","Anticipo comercial","Saldo final","Estado","Soporte tiquete","Soporte hotel","Soporte viáticos","Soporte otros"];
+  const rows=viajes.map((v,i)=>[i+1,v.comercial,v.origen||"",v.destino,v.salida,v.regreso,v.dias,v.transporte,v.aerolinea||"",v.hotel||"",v.motivo||"",v.cliente||"",v.totalEst,v.tiquete,v.hotelVal,v.viaticos,v.otros,v.totalReal,v.porEmpresa,v.anticipoComercial,calcSaldoFinalViaje(v),estadoViaje(v),v.soportes?.tiquete?"Sí":"No",v.soportes?.hotel?"Sí":"No",v.soportes?.viaticos?"Sí":"No",v.soportes?.otros?"Sí":"No"].map(x=>`"${x}"`).join(","));
+  const csv=[heads.join(","),...rows].join("\n");
+  const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent(csv);a.download="WorldMachinery_Viajes.csv";a.click();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LIQUIDAR / REABRIR VIAJE
+// ═══════════════════════════════════════════════════════════════
+async function liquidarViaje(id){
+  const v = viajes.find(x => x.id === id); if(!v) return;
+  const saldo = calcSaldoFinalViaje(v);
+  const msg = saldo > 0
+    ? `¿Marcar como LIQUIDADO?\n\nEl comercial debe devolver ${fmt(saldo)} a la empresa.\n\nConfirma solo si el dinero ya fue recibido.`
+    : saldo < 0
+    ? `¿Marcar como LIQUIDADO?\n\nLa empresa debe pagar ${fmt(Math.abs(saldo))} al comercial.\n\nConfirma solo si el pago ya fue realizado.`
+    : `¿Marcar como LIQUIDADO?\n\nEl saldo es $0, no hay transferencia pendiente.`;
+  if(confirm(msg)){
+    const ok = await sbLiquidarViaje(v.id, true);
+    if(ok){ v.cerrado = true; renderViajes(); }
+  }
+}
+async function reabrirViaje(id){
+  const v = viajes.find(x => x.id === id); if(!v) return;
+  if(confirm("¿Reabrir este viaje? Volverá a estado activo.")){
+    const ok = await sbLiquidarViaje(v.id, false);
+    if(ok){ v.cerrado = false; renderViajes(); }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ADJUNTO – TOGGLE PREVIEW IMAGEN
+// ═══════════════════════════════════════════════════════════════
+function togglePrevImg(uid){
+  const el = document.getElementById(uid);
+  if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ADJUNTO – ABRIR EN NUEVA PESTAÑA
+// ═══════════════════════════════════════════════════════════════
+function abrirAdjunto(uid) {
+  // Images: the preview div holds the img; PDFs: hidden span holds data-src
+  const el = document.getElementById(uid);
+  if (!el) return;
+  let src = '';
+  if (el.tagName === 'SPAN') {
+    src = el.dataset.src; // PDF base64
+  } else {
+    const img = el.querySelector('img');
+    if (img) src = img.src;
+  }
+  if (!src) return;
+  const w = window.open('', '_blank');
+  if (w) {
+    const isPDF = src.startsWith('data:application/pdf');
+    if (isPDF) {
+      w.document.write(`<html><body style="margin:0"><iframe src="${src}" style="width:100vw;height:100vh;border:none"></iframe></body></html>`);
+    } else {
+      w.document.write(`<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="${src}" style="max-width:100%;max-height:100vh;object-fit:contain"></body></html>`);
+    }
+    w.document.close();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SUPABASE CRUD
+// ═══════════════════════════════════════════════════════════════
+
+// ─── Estado de sincronización ───────────────────────────────
+let sbReady = false;
+
+function showSync(msg, tipo="info"){
+  const el = document.getElementById("sync-bar");
+  if(!el) return;
+  const cols = {info:"#2471A3", ok:"#6A9A28", err:"#C0392B", loading:"#D68910"};
+  el.style.background = cols[tipo] || cols.info;
+  el.style.display = "flex";
+  el.querySelector(".sync-msg").textContent = msg;
+  if(tipo==="ok") setTimeout(()=>{ el.style.display="none"; }, 3000);
+}
+
+// ─── Ciudades ───────────────────────────────────────────────
+async function sbCargarCiudades(){
+  const { data, error } = await sb.from("wm_ciudades").select("*").order("nombre");
+  if(error){ console.error(error); renderCiudades(); return; }
+  if(data && data.length > 0){
+    ciudades = data.map(r=>({
+      id: r.id,
+      nombre: r.nombre, hotel: r.hotel, tiquete: r.tiquete,
+      viaticos: r.viaticos, obs: r.obs||""
+    }));
+  }
+  // Si Supabase no tiene ciudades, se usan las predeterminadas del array local
+  renderCiudades();
+}
+
+async function sbGuardarCiudad(obj, idExistente){
+  const row = { nombre:obj.nombre, hotel:obj.hotel, tiquete:obj.tiquete, viaticos:obj.viaticos, obs:obj.obs };
+  let error;
+  if(idExistente){
+    ({ error } = await sb.from("wm_ciudades").update(row).eq("id", idExistente));
+  } else {
+    ({ error } = await sb.from("wm_ciudades").insert(row));
+  }
+  if(error){ alert("Error guardando ciudad: " + error.message); return false; }
+  await sbCargarCiudades();
+  return true;
+}
+
+async function sbEliminarCiudad(id){
+  const { error } = await sb.from("wm_ciudades").delete().eq("id", id);
+  if(error){ alert("Error: " + error.message); return; }
+  await sbCargarCiudades();
+}
+
+// ─── Viajes ─────────────────────────────────────────────────
+async function sbCargarViajes(){
+  const { data, error } = await sb.from("wm_viajes").select("*").order("created_at", {ascending:false});
+  if(error){ console.error(error); return; }
+  viajes = data.map(sbRowToViaje);
+  renderViajes();
+}
+
+function sbRowToViaje(r){
+  return {
+    id: r.id,
+    comercial: r.comercial, origen: r.origen, destino: r.destino,
+    salida: r.salida, regreso: r.regreso, noches: r.noches, dias: r.dias,
+    transporte: r.transporte, aerolinea: r.aerolinea, hotel: r.hotel,
+    motivo: r.motivo, cliente: r.cliente, obs: r.obs,
+    tiquete: r.tiquete, hotelVal: r.hotel_val, viaticos: r.viaticos,
+    otros: r.otros, otrosDesc: r.otros_desc,
+    pgTiquete: r.pg_tiquete, pgHotel: r.pg_hotel, pgOtros: r.pg_otros,
+    totalEst: r.total_est, totalReal: r.total_real, porEmpresa: r.por_empresa,
+    anticipoComercial: r.anticipo_comercial,
+    gastoRealComercial: r.gasto_real_comercial,
+    gastoRealDetalle: r.gasto_real_detalle || {},
+    soportes: r.soportes || {},
+    obsSoportes: r.obs_soportes,
+    adjuntos: r.adjuntos || {},
+    cerrado: r.cerrado || false,
+  };
+}
+
+function viajeToSbRow(v){
+  return {
+    comercial: v.comercial, origen: v.origen||"", destino: v.destino,
+    salida: v.salida, regreso: v.regreso, noches: v.noches, dias: v.dias,
+    transporte: v.transporte||"", aerolinea: v.aerolinea||"", hotel: v.hotel||"",
+    motivo: v.motivo||"", cliente: v.cliente||"", obs: v.obs||"",
+    tiquete: v.tiquete, hotel_val: v.hotelVal, viaticos: v.viaticos,
+    otros: v.otros, otros_desc: v.otrosDesc||"",
+    pg_tiquete: v.pgTiquete, pg_hotel: v.pgHotel, pg_otros: v.pgOtros,
+    total_est: v.totalEst, total_real: v.totalReal, por_empresa: v.porEmpresa,
+    anticipo_comercial: v.anticipoComercial,
+    gasto_real_comercial: v.gastoRealComercial||0,
+    gasto_real_detalle: v.gastoRealDetalle||{},
+    soportes: v.soportes||{},
+    obs_soportes: v.obsSoportes||"",
+    adjuntos: v.adjuntos||{},
+    cerrado: v.cerrado||false,
+  };
+}
+
+async function sbGuardarViaje(v, idExistente){
+  showSync("Guardando...", "loading");
+  const row = viajeToSbRow(v);
+  let error, data;
+  if(idExistente){
+    ({ error, data } = await sb.from("wm_viajes").update(row).eq("id", idExistente).select().single());
+  } else {
+    ({ error, data } = await sb.from("wm_viajes").insert(row).select().single());
+  }
+  if(error){ showSync("Error: " + error.message, "err"); return null; }
+  showSync("Guardado correctamente", "ok");
+  return data;
+}
+
+async function sbEliminarViaje(id){
+  const { error } = await sb.from("wm_viajes").delete().eq("id", id);
+  if(error){ alert("Error: " + error.message); return false; }
+  return true;
+}
+
+async function sbLiquidarViaje(id, cerrado){
+  const { error } = await sb.from("wm_viajes").update({ cerrado }).eq("id", id);
+  if(error){ alert("Error: " + error.message); return false; }
+  return true;
+}
+
+// ─── Realtime ────────────────────────────────────────────────
+function iniciarRealtime(){
+  sb.channel("wm_cambios")
+    .on("postgres_changes", { event:"*", schema:"public", table:"wm_viajes" }, async () => {
+      await sbCargarViajes();
+      showSync("Datos actualizados en tiempo real", "ok");
+    })
+    .on("postgres_changes", { event:"*", schema:"public", table:"wm_ciudades" }, async () => {
+      await sbCargarCiudades();
+    })
+    .subscribe();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT  (Supabase)
+// ═══════════════════════════════════════════════════════════════
+async function init(){
+  showSync("Conectando con la base de datos...", "loading");
+  await sbCargarCiudades();
+  await sbCargarViajes();
+  iniciarRealtime();
+  showSync("Conectado", "ok");
+  sbReady = true;
+}
+init();
+</script>
+</body>
+</html>
